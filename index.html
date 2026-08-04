@@ -156,7 +156,7 @@
         <div class="top-controls">
             <div class="tabs-wrapper">
                 <button class="tab-btn active" onclick="switchTab('tab-summary', this)"><span>🏥</span> 全体俯瞰</button>
-                <button class="tab-btn" onclick="switchTab('tab-benchmark', this)"><span>📊</span> 全国ベンチマーク</button>
+                <button class="tab-btn" onclick="switchTab('tab-benchmark', this)"><span>📊</span> 期間Ⅱ基準ベンチマーク</button>
                 <button class="tab-btn" onclick="switchTab('tab-predict', this)"><span>⚠️</span> 事前検知</button>
                 <button class="tab-btn" onclick="switchTab('tab-dept', this)"><span>🔍</span> 診療科別分析</button>
                 <button class="tab-btn" onclick="switchTab('tab-action', this)"><span>🚨</span> 長期滞留リスト</button>
@@ -194,26 +194,26 @@
                 <div class="kpi-box danger">
                     <div class="kpi-title">推計・機会損失額 (当月概算)</div>
                     <div class="kpi-value" style="color: var(--accent-red);" id="kpi-loss-amount">- 円</div>
-                    <div class="kpi-sub">全国平均からの遅延日数 × 稼働患者数 × 約5万円/日で算出</div>
+                    <div class="kpi-sub">期間Ⅱからの超過日数 × 患者数 × 約5万円/日で算出</div>
                 </div>
                 <div class="kpi-box warning">
-                    <div class="kpi-title">全国平均より遅滞している疾患群</div>
+                    <div class="kpi-title">期間Ⅱを慢性的に超過する疾患群</div>
                     <div class="kpi-value" style="color: var(--accent-orange);" id="kpi-delay-count">- 疾患</div>
                     <div class="kpi-sub">クリティカルパスの見直し、または退院先開拓の推奨ターゲット</div>
                 </div>
             </div>
             <div class="drilldown-container">
                 <div class="panel">
-                    <div class="panel-title">📉 全国平均 vs 自院平均 (疾患別バブルチャート)</div>
+                    <div class="panel-title">📉 期間Ⅱ(基準値) vs 自院平均 (疾患別バブルチャート)</div>
                     <div style="height: 320px;"><canvas id="benchmarkChart"></canvas></div>
-                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">💡 対角線より<strong style="color:var(--accent-red);">上（赤）</strong>にあるほど「全国より退院が遅い疾患」を示します。</div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">💡 対角線より<strong style="color:var(--accent-red);">上（赤）</strong>にあるほど「平均して期間Ⅱを超過している疾患」を示します。</div>
                 </div>
                 <div class="panel">
                     <div class="panel-title">🚨 改善ポテンシャル ワースト疾患</div>
                     <div class="table-scroll-container">
                         <table id="benchmark-table" class="sub-table" style="margin-top:0;">
                             <thead style="background-color: rgba(239, 68, 68, 0.1);">
-                                <tr><th>疾患名</th><th style="text-align:right;">患者数</th><th style="text-align:right;">全国</th><th style="text-align:right;">自院</th><th style="text-align:right;">乖離</th></tr>
+                                <tr><th>疾患名</th><th style="text-align:right;">患者数</th><th style="text-align:right;">期間Ⅱ</th><th style="text-align:right;">自院平均</th><th style="text-align:right;">超過</th></tr>
                             </thead>
                             <tbody><tr><td colspan="5" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
                         </table>
@@ -433,7 +433,7 @@
             chartBenchmark = new Chart(document.getElementById('benchmarkChart').getContext('2d'), {
                 type: 'bubble',
                 data: { datasets: [{ label: '疾患群', data: [], backgroundColor: 'rgba(245, 158, 11, 0.5)' }, { type: 'line', label: '基準線', data: [{x:0,y:0},{x:100,y:100}], borderColor: 'rgba(148,163,184,0.5)', borderDash: [5,5], fill: false }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: '全国平均 在院日数' } }, y: { title: { display: true, text: '自院平均 在院日数' } } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: 'DPC 期間Ⅱ (基準日数)' } }, y: { title: { display: true, text: '自院 平均在院日数' } } } }
             });
 
             chartScatter = new Chart(document.getElementById('scatterChart').getContext('2d'), {
@@ -480,12 +480,7 @@
             event.target.value = '';
         }
 
-        function getMockNationalAverage(diseaseName, myAverage) {
-            let hash = 0; for (let i = 0; i < diseaseName.length; i++) hash = diseaseName.charCodeAt(i) + ((hash << 5) - hash);
-            const pseudoRandom = Math.abs(Math.sin(hash));
-            if (diseaseName.includes("人工膝関節")) return 30; if (diseaseName.includes("動脈瘤破裂")) return 28;
-            return Math.max(1, Math.round(myAverage * (0.7 + (pseudoRandom * 0.5))));
-        }
+        // 外部マスターや全国平均取得関数は不要になったため削除（Excelの期間Ⅱから自己完結して算出します）
 
         function updateDashboardWithData(data, displayDateStr) {
             document.getElementById('header-date').innerText = `分析対象: ${displayDateStr} 実データ`;
@@ -510,7 +505,8 @@
                         dpcCode: getVal(row, ["DPCコード"]) || "-",
                         kikan1: getVal(row, ["入院日から入院期間Ⅰまで", "入院期間Ⅰ"]) || "-",
                         kikan2: getVal(row, ["入院日から入院期間Ⅱまで", "入院期間Ⅱ"]) || "-",
-                        kikan3: getVal(row, ["入院日から入院期間Ⅲまで", "入院期間Ⅲ"]) || "-"
+                        kikan3: getVal(row, ["入院日から入院期間Ⅲまで", "入院期間Ⅲ"]) || "-",
+                        excelNationalAvg: getVal(row, ["全国平均", "全国平均在院日数", "厚労省平均"]) // 追加: Excelからの全国平均読込
                     },
                     kikan2Num: parseInt(String(getVal(row, ["入院期間Ⅱ", "入院日から入院期間Ⅱまで"])).replace(/[^0-9]/g, ''), 10) || 0
                 };
@@ -553,29 +549,59 @@
             const maxP = [...overData].sort((a,b)=>b.stay-a.stay)[0];
             if(maxP) { document.getElementById('kpi-max-stay').innerText = `${maxP.stay} 日`; document.getElementById('kpi-max-disease').innerText = `${maxP.disease} (${maxP.dept})`; }
 
-            const diseaseStats = {};
-            parsedData.forEach(item => { if(item.disease!=="-"){ if(!diseaseStats[item.disease]) diseaseStats[item.disease] = {name:item.disease, totalStay:0, count:0}; diseaseStats[item.disease].totalStay += item.stay; diseaseStats[item.disease].count++; } });
+            // 修正：全国平均に依存せず、「期間Ⅱ」を目標基準値としてベンチマーク集計を行う
+            const dpcStats = {};
+            parsedData.forEach(item => { 
+                const code = item.details.dpcCode;
+                if(code !== "-" && code.length >= 6) {
+                    const mdc6 = code.substring(0, 6);
+                    if(!dpcStats[mdc6]) dpcStats[mdc6] = { code: mdc6, name: item.disease, totalStay: 0, count: 0, kikan2Sum: 0, validKikan2Count: 0 }; 
+                    
+                    dpcStats[mdc6].totalStay += item.stay; 
+                    dpcStats[mdc6].count++; 
+                    
+                    // 期間Ⅱの日数が取得できている場合、その平均を目標値として算出するための集計
+                    if(item.kikan2Num > 0) {
+                        dpcStats[mdc6].kikan2Sum += item.kikan2Num;
+                        dpcStats[mdc6].validKikan2Count++;
+                    }
+                }
+            });
             
             const benchmarkData = []; let totalLoss = 0; let delayCount = 0;
-            Object.values(diseaseStats).forEach(stat => {
-                if(stat.count >= 2) {
+            Object.values(dpcStats).forEach(stat => {
+                // 比較対象として有意なデータ数(例: 2名以上)かつ、期間Ⅱのデータが存在するもの
+                if(stat.count >= 2 && stat.validKikan2Count > 0) {
                     stat.myAverage = Math.round((stat.totalStay / stat.count) * 10) / 10;
-                    stat.nationalAverage = getMockNationalAverage(stat.name, stat.myAverage);
-                    stat.diff = Math.round((stat.myAverage - stat.nationalAverage) * 10) / 10;
-                    if(stat.diff > 0) { delayCount++; stat.loss = Math.round(stat.diff * stat.count * 50000); totalLoss += stat.loss; } else stat.loss = 0;
+                    
+                    // 期間Ⅱの平均日数をこのDPCの「ターゲット（基準）日数」とする
+                    stat.targetDays = Math.round((stat.kikan2Sum / stat.validKikan2Count) * 10) / 10;
+                    
+                    // 期間Ⅱに対する超過日数
+                    stat.diff = Math.round((stat.myAverage - stat.targetDays) * 10) / 10;
+
+                    if(stat.diff > 0) { 
+                        delayCount++; 
+                        // 超過日数 × 人数 × 1日あたりの概算損失(5万円)
+                        stat.loss = Math.round(stat.diff * stat.count * 50000); 
+                        totalLoss += stat.loss; 
+                    } else {
+                        stat.loss = 0;
+                    }
                     benchmarkData.push(stat);
                 }
             });
             document.getElementById('kpi-loss-amount').innerText = `${totalLoss.toLocaleString()} 円`;
-            document.getElementById('kpi-delay-count').innerText = `${delayCount} 疾患`;
+            document.getElementById('kpi-delay-count').innerText = `${delayCount} 疾患群`;
 
             let maxBench = 20;
-            chartBenchmark.data.datasets[0].data = benchmarkData.map(s => { maxBench=Math.max(maxBench, s.myAverage, s.nationalAverage); return {x:s.nationalAverage, y:s.myAverage, r:Math.min(20, Math.max(4, s.count*3))}; });
-            chartBenchmark.data.datasets[0].backgroundColor = benchmarkData.map(d=>d.myAverage>d.nationalAverage?'rgba(239,68,68,0.6)':'rgba(56,189,248,0.6)');
+            chartBenchmark.data.datasets[0].data = benchmarkData.map(s => { maxBench=Math.max(maxBench, s.myAverage, s.targetDays); return {x:s.targetDays, y:s.myAverage, r:Math.min(20, Math.max(4, s.count*3))}; });
+            chartBenchmark.data.datasets[0].backgroundColor = benchmarkData.map(d=>d.myAverage>d.targetDays?'rgba(239,68,68,0.6)':'rgba(56,189,248,0.6)');
             chartBenchmark.data.datasets[1].data = [{x:0,y:0},{x:maxBench+10,y:maxBench+10}];
             chartBenchmark.options.scales.x.max = maxBench+10; chartBenchmark.options.scales.y.max = maxBench+10; chartBenchmark.update();
 
-            document.querySelector("#benchmark-table tbody").innerHTML = benchmarkData.filter(d=>d.diff>0).sort((a,b)=>b.loss-a.loss).slice(0,5).map(s => `<tr><td style="color:var(--accent-blue);font-weight:bold;">${s.name}</td><td style="text-align:right;">${s.count}名</td><td style="text-align:right;">${s.nationalAverage}日</td><td style="text-align:right;">${s.myAverage}日</td><td style="text-align:right;color:var(--accent-red);font-weight:bold;">+${s.diff}日<br><span style="font-size:10px;color:var(--text-muted);">(-${(s.loss/10000).toFixed(0)}万)</span></td></tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">該当なし</td></tr>`;
+            // ワースト疾患リストにDPCコードを併記
+            document.querySelector("#benchmark-table tbody").innerHTML = benchmarkData.filter(d=>d.diff>0).sort((a,b)=>b.loss-a.loss).slice(0,5).map(s => `<tr><td><strong style="color:var(--accent-blue);">${s.name}</strong><br><span style="font-size:10px;color:var(--text-muted);font-family:monospace;">DPC: ${s.code}</span></td><td style="text-align:right;">${s.count}名</td><td style="text-align:right;">${s.targetDays}日</td><td style="text-align:right;">${s.myAverage}日</td><td style="text-align:right;color:var(--accent-red);font-weight:bold;">+${s.diff}日<br><span style="font-size:10px;color:var(--text-muted);">(-${(s.loss/10000).toFixed(0)}万)</span></td></tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">該当なし</td></tr>`;
 
             let maxKikan=20; const scatterData=[];
             parsedData.forEach(i => { if(i.kikan2Num>0){ maxKikan=Math.max(maxKikan, i.kikan2Num, i.stay); scatterData.push({x:i.kikan2Num, y:i.stay, patientId:i.id}); }});
