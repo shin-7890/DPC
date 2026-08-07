@@ -79,6 +79,12 @@
         .panel { background-color: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
         .panel-title { font-size: 16px; margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 1px solid var(--border); color: var(--text-main); display: flex; justify-content: space-between; align-items: center; }
 
+        .consultant-box { background: rgba(56, 189, 248, 0.05); border-left: 4px solid var(--accent-blue); padding: 15px 18px; border-radius: 0 8px 8px 0; margin-top: 15px; }
+        .consultant-box.warning { background: rgba(245, 158, 11, 0.05); border-left-color: var(--accent-orange); }
+        .consultant-box-title { font-size: 14px; font-weight: bold; color: var(--accent-blue); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .consultant-box.warning .consultant-box-title { color: var(--accent-orange); }
+        .consultant-box-body { font-size: 13px; line-height: 1.6; color: var(--text-main); }
+
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); }
         th { color: var(--text-muted); font-weight: 600; background-color: rgba(255,255,255,0.02); }
@@ -185,7 +191,16 @@
             </div>
             <div class="panel">
                 <div class="panel-title">📉 総合病院「期間II超過」および「出来高」患者数の推移</div>
-                <div style="position: relative; height: 350px;"><canvas id="trendChart"></canvas></div>
+                <div style="position: relative; height: 320px;"><canvas id="trendChart"></canvas></div>
+                
+                <div class="consultant-box">
+                    <div class="consultant-box-title">💡 推移分析とアドバイス</div>
+                    <div class="consultant-box-body" id="summary-analysis-text">
+                        ・ <strong>期間Ⅱ超過の急増傾向:</strong> 7月以降、期間Ⅱ超過患者数が180名超へと急増しており、病床回転率の低下が懸念されます。<br>
+                        ・ <strong>出来高落下の高止まり:</strong> 高収益な期間Ⅰ・Ⅱを逃し、利益率の低い「出来高（期間Ⅲ超え）」に落ち込んでいる患者が30〜40名常態化しています。<br>
+                        ・ <strong>推奨アクション:</strong> 出来高患者の退院・転院調整を優先しつつ、「事前検知」タブでリミットまであと3日以内の予備軍にPFM早期介入を行ってください。
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -254,6 +269,15 @@
                             <thead><tr><th>診療科</th><th>期間II超過</th><th>平均超過日数</th></tr></thead>
                             <tbody><tr><td colspan="3" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
                         </table>
+                    </div>
+                </div>
+
+                <div class="consultant-box warning">
+                    <div class="consultant-box-title">🎯 推奨アクション</div>
+                    <div class="consultant-box-body" id="dept-action-text">
+                        ・ <strong>内科系・総合診療科（高頻度・長滞留）:</strong> 誤嚥性肺炎や脳卒中等の高齢患者に対し、入院7日目でのMSW（ソーシャルワーカー）早期介入を徹底し、地域包括ケア病棟や連携病院への転院調整を前倒ししてください。<br>
+                        ・ <strong>外科系・整形外科:</strong> 術後パスの期間Ⅱ遵守率をチェックし、リハビリ目的の転院打診を「手術前〜術後直後」から開始する運用ルールへ改善してください。<br>
+                        ・ <strong>共通運用:</strong> 超過患者数上位3科を対象に、病床管理師長・MSW・主治医による週1回の「カンファレンス介入」を実施することを強く推奨します。
                     </div>
                 </div>
             </div>
@@ -420,7 +444,6 @@
             chartTrend = new Chart(document.getElementById('trendChart').getContext('2d'), {
                 type: 'line',
                 data: { 
-                    // Initial base data from 7/6 to 7/27
                     labels: ['5/18', '5/25', '6/1', '6/8', '6/15', '6/22', '6/29', '7/6', '7/13', '7/27(今週)'], 
                     datasets: [
                         { label: '期間II超過', data: [99, 94, 86, 104, 107, 99, 101, 160, 161, 184], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2, fill: true, tension: 0.4 },
@@ -480,8 +503,6 @@
             event.target.value = '';
         }
 
-        // 外部マスターや全国平均取得関数は不要になったため削除（Excelの期間Ⅱから自己完結して算出します）
-
         function updateDashboardWithData(data, displayDateStr) {
             document.getElementById('header-date').innerText = `分析対象: ${displayDateStr} 実データ`;
             const getVal = (r, keys) => { for (let k of keys) { if (r[k] !== undefined && r[k] !== "") return r[k]; } return ""; };
@@ -500,13 +521,12 @@
                     dept: getVal(row, ["科名", "診療科"]) || "不明", ward: getVal(row, ["病棟名称", "病棟"]) || "不明",
                     details: {
                         name: getVal(row, ["患者氏名", "氏名"]) || "匿名", age: getVal(row, ["患者年齢", "年齢"]) || "-",
-                        // Extraction for Admission Date and DPC periods
                         admissionDate: getVal(row, ["入院日(転入日).1", "入院日(転入日)", "入院日"]) || "-", 
                         dpcCode: getVal(row, ["DPCコード"]) || "-",
                         kikan1: getVal(row, ["入院日から入院期間Ⅰまで", "入院期間Ⅰ"]) || "-",
                         kikan2: getVal(row, ["入院日から入院期間Ⅱまで", "入院期間Ⅱ"]) || "-",
                         kikan3: getVal(row, ["入院日から入院期間Ⅲまで", "入院期間Ⅲ"]) || "-",
-                        excelNationalAvg: getVal(row, ["全国平均", "全国平均在院日数", "厚労省平均"]) // 追加: Excelからの全国平均読込
+                        excelNationalAvg: getVal(row, ["全国平均", "全国平均在院日数", "厚労省平均"])
                     },
                     kikan2Num: parseInt(String(getVal(row, ["入院期間Ⅱ", "入院日から入院期間Ⅱまで"])).replace(/[^0-9]/g, ''), 10) || 0
                 };
@@ -518,7 +538,7 @@
             const totalOver = overData.length;
             const totalDekidaka = overData.filter(r => r.type.includes("出来高")).length;
 
-            // Trend Chart Update logic (Duplicate Fix)
+            // Trend Chart Update
             let labelParts = displayDateStr.split('/');
             const newDateLabel = labelParts.length >= 3 ? `${Number(labelParts[1])}/${Number(labelParts[2])}` : displayDateStr;
             const newLabel = `${newDateLabel}(今週)`;
@@ -527,17 +547,13 @@
             const d1 = chartTrend.data.datasets[0].data;
             const d2 = chartTrend.data.datasets[1].data;
             
-            // Check if the current last label matches the date we are trying to add
             const lastDateLabel = (labels[labels.length - 1] || "").replace('(今週)', '').trim();
-            
             if (lastDateLabel === newDateLabel) {
-                // Same week data (e.g., reloading 7/27 over 7/27) -> Update in place
                 labels[labels.length - 1] = newLabel; 
                 d1[d1.length - 1] = totalOver; 
                 d2[d2.length - 1] = totalDekidaka;
             } else {
-                // New week data -> Shift and push
-                if(labels[labels.length - 1]) labels[labels.length - 1] = lastDateLabel; // Remove (今週) from old
+                if(labels[labels.length - 1]) labels[labels.length - 1] = lastDateLabel;
                 labels.shift(); labels.push(newLabel); 
                 d1.shift(); d1.push(totalOver); 
                 d2.shift(); d2.push(totalDekidaka);
@@ -549,18 +565,22 @@
             const maxP = [...overData].sort((a,b)=>b.stay-a.stay)[0];
             if(maxP) { document.getElementById('kpi-max-stay').innerText = `${maxP.stay} 日`; document.getElementById('kpi-max-disease').innerText = `${maxP.disease} (${maxP.dept})`; }
 
-            // 修正：全国平均に依存せず、「期間Ⅱ」を目標基準値としてベンチマーク集計を行う
+            // Dynamic Consultant Text for Overview
+            document.getElementById('summary-analysis-text').innerHTML = `
+                ・ <strong>直近分析結果 (${displayDateStr}):</strong> 期間Ⅱ超過患者数は <strong>${totalOver}名</strong>（うち出来高 <strong>${totalDekidaka}名</strong>）。病床回転率の停滞が顕著です。<br>
+                ・ <strong>収益構造のボトルネック:</strong> 超過患者の約 ${(totalOver > 0 ? ((totalDekidaka/totalOver)*100).toFixed(0) : 0)}% が利益率の最も低くなる出来高算定（期間Ⅲ超え）へ流出しており、1日あたり大きな逸失利益が発生しています。<br>
+                ・ <strong>推奨アクション:</strong> 出来高患者（${totalDekidaka}名）の退院・転院調整を最優先としつつ、「事前検知」タブでリミット目前の患者へPFM早期介入を行ってください。
+            `;
+
+            // Benchmark Stats
             const dpcStats = {};
             parsedData.forEach(item => { 
                 const code = item.details.dpcCode;
                 if(code !== "-" && code.length >= 6) {
                     const mdc6 = code.substring(0, 6);
                     if(!dpcStats[mdc6]) dpcStats[mdc6] = { code: mdc6, name: item.disease, totalStay: 0, count: 0, kikan2Sum: 0, validKikan2Count: 0 }; 
-                    
                     dpcStats[mdc6].totalStay += item.stay; 
                     dpcStats[mdc6].count++; 
-                    
-                    // 期間Ⅱの日数が取得できている場合、その平均を目標値として算出するための集計
                     if(item.kikan2Num > 0) {
                         dpcStats[mdc6].kikan2Sum += item.kikan2Num;
                         dpcStats[mdc6].validKikan2Count++;
@@ -570,19 +590,13 @@
             
             const benchmarkData = []; let totalLoss = 0; let delayCount = 0;
             Object.values(dpcStats).forEach(stat => {
-                // 比較対象として有意なデータ数(例: 2名以上)かつ、期間Ⅱのデータが存在するもの
                 if(stat.count >= 2 && stat.validKikan2Count > 0) {
                     stat.myAverage = Math.round((stat.totalStay / stat.count) * 10) / 10;
-                    
-                    // 期間Ⅱの平均日数をこのDPCの「ターゲット（基準）日数」とする
                     stat.targetDays = Math.round((stat.kikan2Sum / stat.validKikan2Count) * 10) / 10;
-                    
-                    // 期間Ⅱに対する超過日数
                     stat.diff = Math.round((stat.myAverage - stat.targetDays) * 10) / 10;
 
                     if(stat.diff > 0) { 
                         delayCount++; 
-                        // 超過日数 × 人数 × 1日あたりの概算損失(5万円)
                         stat.loss = Math.round(stat.diff * stat.count * 50000); 
                         totalLoss += stat.loss; 
                     } else {
@@ -600,9 +614,9 @@
             chartBenchmark.data.datasets[1].data = [{x:0,y:0},{x:maxBench+10,y:maxBench+10}];
             chartBenchmark.options.scales.x.max = maxBench+10; chartBenchmark.options.scales.y.max = maxBench+10; chartBenchmark.update();
 
-            // ワースト疾患リストにDPCコードを併記
             document.querySelector("#benchmark-table tbody").innerHTML = benchmarkData.filter(d=>d.diff>0).sort((a,b)=>b.loss-a.loss).slice(0,5).map(s => `<tr><td><strong style="color:var(--accent-blue);">${s.name}</strong><br><span style="font-size:10px;color:var(--text-muted);font-family:monospace;">DPC: ${s.code}</span></td><td style="text-align:right;">${s.count}名</td><td style="text-align:right;">${s.targetDays}日</td><td style="text-align:right;">${s.myAverage}日</td><td style="text-align:right;color:var(--accent-red);font-weight:bold;">+${s.diff}日<br><span style="font-size:10px;color:var(--text-muted);">(-${(s.loss/10000).toFixed(0)}万)</span></td></tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">該当なし</td></tr>`;
 
+            // Scatter chart
             let maxKikan=20; const scatterData=[];
             parsedData.forEach(i => { if(i.kikan2Num>0){ maxKikan=Math.max(maxKikan, i.kikan2Num, i.stay); scatterData.push({x:i.kikan2Num, y:i.stay, patientId:i.id}); }});
             chartScatter.data.datasets[0].data = scatterData;
@@ -612,11 +626,23 @@
 
             document.querySelector("#warning-table tbody").innerHTML = parsedData.filter(i=>i.kikan2Num>0&&i.kikan2Num>=i.stay&&(i.kikan2Num-i.stay)<=3).sort((a,b)=>(a.kikan2Num-a.stay)-(b.kikan2Num-b.stay)).map(p=>`<tr onclick="openPatientModal('${p.id}')" style="cursor:pointer;"><td><strong>${p.doctor}</strong><br><span style="font-size:10px;color:var(--text-muted);">${p.dept.replace("総）","")}</span></td><td style="color:var(--accent-blue);">${p.disease}</td><td>${p.stay} / ${p.kikan2Num}</td><td><span class="badge badge-orange" style="background-color:var(--accent-orange);color:white;">あと ${p.kikan2Num-p.stay} 日</span></td></tr>`).join('') || `<tr><td colspan="4" style="text-align:center;">予備軍なし</td></tr>`;
 
+            // Department Analysis Update
             const deptStats = {}; overData.forEach(i => { const d=i.dept.replace("総）","").trim()||"不明"; if(!deptStats[d]) deptStats[d]={c:0, o:0}; deptStats[d].c++; deptStats[d].o+=i.over; });
             const deptArr = Object.keys(deptStats).map(k=>({n:k, c:deptStats[k].c, avg:(deptStats[k].o/deptStats[k].c).toFixed(1)})).sort((a,b)=>b.c-a.c);
             const top8 = deptArr.slice(0,8);
             chartDept.data.labels = top8.map(d=>d.n); chartDept.data.datasets[0].data = top8.map(d=>d.c); chartDept.update();
             document.querySelector("#dept-table tbody").innerHTML = deptArr.map(d=>`<tr><td><strong>${d.n}</strong></td><td style="color:var(--accent-red);font-weight:bold;">${d.c}名</td><td style="color:var(--accent-orange);">+${d.avg}日</td></tr>`).join('');
+
+            // Dynamic Department Recommended Action Text
+            const top1Dept = deptArr[0] ? deptArr[0].n : "上位診療科";
+            const top1Count = deptArr[0] ? deptArr[0].c : 0;
+            const top2Dept = deptArr[1] ? deptArr[1].n : "次順位科";
+
+            document.getElementById('dept-action-text').innerHTML = `
+                ・ <strong>最優先介入科（${top1Dept}）:</strong> 超過患者数 <strong>${top1Count}名</strong> と最も滞留が集中しています。MSW（ソーシャルワーカー）を病棟カンファレンスへ常駐させ、退院先開拓と家族説明を前倒し実施してください。<br>
+                ・ <strong>次順位（${top2Dept}等）:</strong> 術後パスおよび診療プロセスの期間Ⅱ遵守率を検証し、転院・退院打診のタイミングを「入院初期（3日目以内）」へ徹底して早めてください。<br>
+                ・ <strong>全科共通アクション:</strong> 滞留患者の『ボトルネック理由（転院先空き待ち／家族意向調整／リハビリ延長等）』を分類し、カンバンタブでステータスを見える化して毎週追跡してください。
+            `;
 
             renderActionTable(overData); renderKanbanBoard(overData);
         }
@@ -657,7 +683,6 @@
             document.getElementById('modal-disease').innerText = p.disease; 
             document.getElementById('modal-dpc').innerText = p.details.dpcCode;
             
-            // Re-established logic for Admission Date and DPC periods display
             document.getElementById('modal-admission').innerText = p.details.admissionDate;
             document.getElementById('modal-kikan1').innerText = p.details.kikan1;
             document.getElementById('modal-kikan2').innerText = p.details.kikan2;
