@@ -234,10 +234,10 @@
                     <div class="kpi-value" style="color: var(--accent-red);" id="kpi-loss-amount">- 円</div>
                     <div class="kpi-sub">実際の超過日数合計 × 約5万円/日で算出</div>
                 </div>
-                <div class="kpi-box warning">
+                <div class="kpi-box warning" onclick="document.getElementById('benchmark-table').scrollIntoView({behavior: 'smooth', block: 'center'})" style="cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" title="クリックでリストへ移動">
                     <div class="kpi-title">期間Ⅱを慢性的に超過する診療科</div>
                     <div class="kpi-value" style="color: var(--accent-orange);" id="kpi-delay-count">- 診療科</div>
-                    <div class="kpi-sub">クリティカルパスの見直し、または退院先開拓の推奨ターゲット</div>
+                    <div class="kpi-sub">クリティカルパスの見直し、または退院先開拓の推奨ターゲット <strong style="color:var(--accent-blue);">(クリックで一覧へ)</strong></div>
                 </div>
             </div>
             <div class="drilldown-container">
@@ -633,7 +633,42 @@
             chartScatter = new Chart(document.getElementById('scatterChart').getContext('2d'), {
                 type: 'scatter', 
                 data: { datasets: [{ label: '患者', data: [], backgroundColor: '#38bdf8' }, { type: 'line', data: [{x:0,y:0},{x:100,y:100}], borderColor: 'rgba(239,68,68,0.5)', borderDash: [5,5], fill: false }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, onClick: (e, el) => { if(el.length>0 && el[0].datasetIndex===0) openPatientModal(chartScatter.data.datasets[0].data[el[0].index].patientId); } }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.datasetIndex === 1) return '基準線 (在院日数 ＝ 期間Ⅱ)';
+                                    const raw = context.raw;
+                                    const p = patientDataMap[raw.patientId];
+                                    if (!p) return `(x: ${raw.x}, y: ${raw.y})`;
+
+                                    const remain = raw.x - raw.y; // 期間Ⅱ - 在院日数
+                                    let statusStr = "";
+                                    if (remain > 0) statusStr = `⚠️ あと ${remain} 日で超過`;
+                                    else if (remain === 0) statusStr = `🚨 本日がリミット`;
+                                    else statusStr = `❌ 超過 ${Math.abs(remain)} 日`;
+
+                                    return [
+                                        `患者: ${p.details.name} (${p.dept.replace("総）","")})`,
+                                        `主治医: ${p.doctor}`,
+                                        `疾患名: ${p.disease}`,
+                                        `在院: ${raw.y}日 / 期間Ⅱ: ${raw.x}日`,
+                                        `${statusStr}`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: { 
+                        x: { title: { display: true, text: 'DPC 期間Ⅱ (リミット日数)' } }, 
+                        y: { title: { display: true, text: '現在の 在院日数' } } 
+                    },
+                    onClick: (e, el) => { if(el.length>0 && el[0].datasetIndex===0) openPatientModal(chartScatter.data.datasets[0].data[el[0].index].patientId); } 
+                }
             });
 
             // Dept Bar Chart
@@ -829,8 +864,8 @@
             chartBenchmark.data.datasets[1].data = [{x:0,y:0},{x:maxBench+5,y:maxBench+5}];
             chartBenchmark.options.scales.x.max = maxBench+5; chartBenchmark.options.scales.y.max = maxBench+5; chartBenchmark.update();
 
-            // Table sorted by average excess days (diff)
-            document.querySelector("#benchmark-table tbody").innerHTML = benchmarkData.filter(d=>d.diff>0).sort((a,b)=>b.diff-a.diff).slice(0,5).map(s => `<tr><td><strong style="color:var(--accent-blue);">${s.name}</strong></td><td style="text-align:right;">${s.count}名<br><span style="font-size:10px;color:var(--accent-red);">うち超過 ${s.overCount}名</span></td><td style="text-align:right;">${s.targetDays}日</td><td style="text-align:right;">${s.myAverage}日</td><td style="text-align:right;color:var(--accent-red);font-weight:bold;">+${s.diff>0?s.diff:0}日<br><span style="font-size:10px;color:var(--text-muted);">(-${(s.loss/10000).toFixed(0)}万)</span></td></tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">該当なし</td></tr>`;
+            // Table sorted by average excess days (diff) - Showing all instead of top 5
+            document.querySelector("#benchmark-table tbody").innerHTML = benchmarkData.filter(d=>d.diff>0).sort((a,b)=>b.diff-a.diff).map(s => `<tr><td><strong style="color:var(--accent-blue);">${s.name}</strong></td><td style="text-align:right;">${s.count}名<br><span style="font-size:10px;color:var(--accent-red);">うち超過 ${s.overCount}名</span></td><td style="text-align:right;">${s.targetDays}日</td><td style="text-align:right;">${s.myAverage}日</td><td style="text-align:right;color:var(--accent-red);font-weight:bold;">+${s.diff>0?s.diff:0}日<br><span style="font-size:10px;color:var(--text-muted);">(-${(s.loss/10000).toFixed(0)}万)</span></td></tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">該当なし</td></tr>`;
 
             let maxKikan=20; const scatterData=[];
             parsedData.forEach(i => { if(i.kikan2Num>0){ maxKikan=Math.max(maxKikan, i.kikan2Num, i.stay); scatterData.push({x:i.kikan2Num, y:i.stay, patientId:i.id}); }});
