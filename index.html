@@ -169,7 +169,7 @@
     <div id="app-content" style="display: none;">
         <div class="header">
             <h1>🏥 総合大雄会病院（急性期セグメント）DPC管理センター</h1>
-            <div style="font-size: 14px; color: var(--text-muted);" id="header-date">分析対象: 2026/08/10 実データ</div>
+            <div style="font-size: 14px; color: var(--text-muted);" id="header-date">分析対象: 2026/09/07 実データ</div>
         </div>
 
         <div class="top-controls">
@@ -194,8 +194,8 @@
             <div class="kpi-container">
                 <div class="kpi-box danger">
                     <div class="kpi-title">DPC 期間II超過患者数 (直近)</div>
-                    <div class="kpi-value" style="color: var(--accent-red);" id="kpi-over-total">205 名</div>
-                    <div class="kpi-sub" id="kpi-over-sub">内訳: 出来高 45名 / 期間III 160名</div>
+                    <div class="kpi-value" style="color: var(--accent-red);" id="kpi-over-total">224 名</div>
+                    <div class="kpi-sub" id="kpi-over-sub">内訳: 出来高 56名 / 期間III 168名</div>
                 </div>
                 <div class="kpi-box info">
                     <div class="kpi-title">最長滞留日数</div>
@@ -210,10 +210,10 @@
                 <div class="consultant-box">
                     <div class="consultant-box-title">💡 推移分析とアドバイス</div>
                     <div class="consultant-box-body" id="summary-analysis-text">
-                        ・ <strong>直近分析結果 (2026/08/10):</strong> 期間Ⅱ超過患者数は <strong>205名</strong>（うち出来高 <strong>45名</strong>）。病床回転率の低下が懸念されます。<br>
-                        ・ <strong>収益構造のボトルネック:</strong> 超過患者の約 22% が利益率の最も低くなる出来高算定（期間Ⅲ超え）へ流出しており、1日あたり大きな逸失利益が発生しています。<br>
-                        ・ <strong>推奨アクション:</strong> 出来高患者（45名）の退院・転院調整を最優先としつつ、「事前検知」タブでリミット目前の予備軍へPFM早期介入を行ってください。<br>
-                        <span style="font-size:11px; color:var(--text-muted); display:inline-block; margin-top:5px;">※最新の「入院期間Ⅱ超え_20260803.xlsx」および「入院期間Ⅱ超え_20260810.xlsx」の集計推移を反映しています。（詳細データはExcelを読み込んでください）</span>
+                        ・ <strong>直近分析結果 (2026/09/07):</strong> 期間Ⅱ超過患者数は <strong>224名</strong>（うち出来高 <strong>56名</strong>）。病床回転率の低下が懸念されます。<br>
+                        ・ <strong>収益構造のボトルネック:</strong> 超過患者の約 25% が利益率の最も低くなる出来高算定（期間Ⅲ超え）へ流出しており、1日あたり大きな逸失利益が発生しています。<br>
+                        ・ <strong>推奨アクション:</strong> 出来高患者（56名）の退院・転院調整を最優先としつつ、「事前検知」タブでリミット目前の予備軍へPFM早期介入を行ってください。<br>
+                        <span style="font-size:11px; color:var(--text-muted); display:inline-block; margin-top:5px;">※最新の「入院期間Ⅱ超え_20260907.xlsx」までの集計推移を反映しています。（詳細データはExcelを読み込んでください）</span>
                     </div>
                 </div>
             </div>
@@ -537,10 +537,10 @@
             chartTrend = new Chart(document.getElementById('trendChart').getContext('2d'), {
                 type: 'line',
                 data: { 
-                    labels: ['6/1', '6/8', '6/15', '6/22', '6/29', '7/6', '7/13', '7/27', '8/3', '8/10(今週)'], 
+                    labels: ['7/6', '7/13', '7/27', '8/3', '8/10', '8/17', '8/24', '8/31', '9/7(今週)'], 
                     datasets: [
-                        { label: '期間II超過', data: [86, 104, 107, 99, 101, 160, 161, 184, 192, 205], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2, fill: true, tension: 0.4 },
-                        { label: 'うち出来高', data: [14, 12, 14, 14, 17, 40, 39, 34, 38, 45], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 2, fill: true, tension: 0.4 }
+                        { label: '期間II超過', data: [160, 161, 184, 192, 205, 212, 218, 208, 224], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2, fill: true, tension: 0.4 },
+                        { label: 'うち出来高', data: [40, 39, 34, 38, 45, 48, 50, 47, 56], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 2, fill: true, tension: 0.4 }
                     ]
                 }, 
                 options: { responsive: true, maintainAspectRatio: false }
