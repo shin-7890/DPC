@@ -700,6 +700,7 @@
             if (tooltip) tooltip.style.display = 'none';
 
             let processedCount = 0;
+            let overwriteCount = 0;
 
             files.forEach(file => {
                 const match = file.name.match(/_?(\d{8})/);
@@ -725,6 +726,10 @@
                             if (hasData) jsonData.push(row);
                         }
                         
+                        if (window.allRawDataMap[displayDateStr]) {
+                            overwriteCount++;
+                        }
+                        
                         window.allRawDataMap[displayDateStr] = jsonData;
                         extractTrendData(jsonData, displayDateStr);
                         
@@ -745,7 +750,11 @@
                             // 必ず一番新しい日付のデータで分析タブを更新する
                             updateDashboardWithData(window.allRawDataMap[latestDateStr], latestDateStr);
                             
-                            showToast(`${files.length}件のファイルの読み込みと分析が完了しました。`);
+                            if (overwriteCount > 0) {
+                                showToast(`${files.length}件の処理完了（同日の重複ファイルは1件として統合しました）`);
+                            } else {
+                                showToast(`${files.length}件のファイルの読み込みと分析が完了しました。`);
+                            }
                             document.getElementById('header-date').innerText = `分析対象: ${latestDateStr} 実データ`;
                         }
                     } catch (err) { 
