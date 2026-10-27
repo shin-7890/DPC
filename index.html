@@ -113,7 +113,7 @@
         .ward-list-item:hover { background-color: var(--hover-bg); }
         .ward-list-item.active { background-color: var(--highlight-bg); border-left: 4px solid var(--accent-blue); }
         .ward-name { font-weight: bold; font-size: 14px; }
-        .ward-count { font-size: 12px; color: var(--accent-red); font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 2px 8px; border-radius: 12px; }
+        .ward-count { font-size: 12px; font-weight: bold; padding: 2px 8px; border-radius: 12px; display: inline-block;}
 
         #admin-panel { position: fixed; bottom: 20px; right: 20px; background-color: var(--panel-bg); border: 2px solid var(--accent-blue); border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); z-index: 1000; width: 250px; transition: all 0.3s ease; }
         #admin-panel.closed { height: 40px; cursor: pointer; overflow: hidden; }
@@ -152,11 +152,15 @@
         .tooltip-container:hover .tooltip-icon { background-color: var(--accent-blue); }
         .tooltip-box { display: none; position: absolute; top: 25px; left: 0; width: 380px; background-color: var(--panel-bg); border: 1px solid var(--accent-blue); padding: 15px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 1000; font-size: 12px; color: var(--text-main); font-weight: normal; line-height: 1.6; text-transform: none; letter-spacing: normal; }
         .tooltip-container:hover .tooltip-box { display: block; animation: fadeIn 0.2s ease-in-out; }
-        @media (max-width: 800px) { .tooltip-box { width: 280px; left: -100px; } }
+        @media (max-width: 800px) { .tooltip-box { width: 280px; left: -10px; } }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
         .toast-message { padding: 12px 20px; border-radius: 8px; color: white; font-size: 14px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); opacity: 0; transform: translateX(50px); transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); display: flex; align-items: center; gap: 8px; pointer-events: auto; }
         .toast-message.show { opacity: 1; transform: translateX(0); }
+
+        .onboarding-tooltip { position: absolute; top: calc(100% + 12px); left: 0; background-color: var(--accent-blue); color: #fff; padding: 12px 15px; border-radius: 8px; font-size: 12px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 100; width: 310px; line-height: 1.6; animation: floatUpDown 2s infinite ease-in-out; pointer-events: none; }
+        .onboarding-tooltip::after { content: ''; position: absolute; top: -6px; left: 30px; border-width: 0 6px 6px 6px; border-style: solid; border-color: transparent transparent var(--accent-blue) transparent; }
+        @keyframes floatUpDown { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
     </style>
 </head>
 <body class="light-theme">
@@ -176,39 +180,49 @@
     <div id="app-content" style="display: none;">
         <div class="header">
             <h1>🏥 総合大雄会病院（急性期セグメント）DPC管理センター</h1>
-            <div style="font-size: 14px; color: var(--text-muted);" id="header-date">分析対象: 2026/10/19 実データ</div>
+            <div style="font-size: 14px; color: var(--text-muted);" id="header-date">分析対象: データ未読込</div>
         </div>
 
         <div class="top-controls">
             <div class="tabs-wrapper">
                 <button class="tab-btn active" onclick="switchTab('tab-summary', this)"><span>🏥</span> 全体俯瞰</button>
-                <button class="tab-btn" onclick="switchTab('tab-benchmark', this)"><span>📊</span> 期間Ⅱ基準ベンチマーク</button>
-                <button class="tab-btn" onclick="switchTab('tab-predict', this)"><span>⚠️</span> 事前検知</button>
                 <button class="tab-btn" onclick="switchTab('tab-dept', this)"><span>🔍</span> 診療科別分析</button>
                 <button class="tab-btn" onclick="switchTab('tab-ward', this)"><span>🛏️</span> 病棟別分析</button>
                 <button class="tab-btn" onclick="switchTab('tab-action', this)"><span>🚨</span> 長期滞留リスト</button>
+                <button class="tab-btn" onclick="switchTab('tab-benchmark', this)"><span>📊</span> 期間Ⅱ基準ベンチマーク</button>
+                <button class="tab-btn" onclick="switchTab('tab-predict', this)"><span>⚠️</span> 事前検知</button>
                 <button class="tab-btn" onclick="switchTab('tab-kanban', this)"><span>📋</span> カンバン</button>
             </div>
             <div style="display: flex; gap: 10px;">
-                <button class="action-btn-primary" onclick="document.getElementById('excel-file-input').click()">📥 最新Excelを読込</button>
-                <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleFileSelect(event)">
+                <div style="position: relative;">
+                    <button class="action-btn-primary" onclick="document.getElementById('excel-file-input').click()" title="複数ファイルを同時に選択して読み込めます">📥 最新(または過去)のExcelを読込</button>
+                    <div id="onboarding-tooltip" class="onboarding-tooltip">
+                        こちらからExcelファイルを読み込んでください。<br>
+                        同時に複数ファイル選択可能です。<br>
+                        日付は自動的にソートされます。<br>
+                        複数回に分けての読み込みも可能です。<br>
+                        トレンド表示の推奨は過去10週分程度です。
+                    </div>
+                </div>
+                <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" multiple style="display: none;" onchange="handleFileSelect(event)">
                 <button onclick="toggleFullScreen()" class="theme-btn" id="fullscreen-btn">🔲 全画面表示</button>
                 <button onclick="toggleTheme()" class="theme-btn" id="theme-toggle-btn">🌙 ダークモード</button>
                 <button class="sys-logout-btn" onclick="sysLogout()">🔓 ログアウト</button>
             </div>
         </div>
 
+        <!-- タブ1: 全体俯瞰 -->
         <div id="tab-summary" class="tab-pane active">
             <div class="kpi-container">
                 <div class="kpi-box danger">
                     <div class="kpi-title">DPC 期間II超過患者数 (直近)</div>
-                    <div class="kpi-value" style="color: var(--accent-red);" id="kpi-over-total">164 名</div>
-                    <div class="kpi-sub" id="kpi-over-sub">内訳: 出来高 45名 / 期間III 119名</div>
+                    <div class="kpi-value" style="color: var(--accent-red);" id="kpi-over-total">- 名</div>
+                    <div class="kpi-sub" id="kpi-over-sub">内訳: データ未読込</div>
                 </div>
                 <div class="kpi-box info">
                     <div class="kpi-title">最長滞留日数</div>
-                    <div class="kpi-value" style="color: var(--accent-blue);" id="kpi-max-stay">141 日</div>
-                    <div class="kpi-sub" id="kpi-max-disease">誤嚥性肺炎 (総）総合診療科)</div>
+                    <div class="kpi-value" style="color: var(--accent-blue);" id="kpi-max-stay">- 日</div>
+                    <div class="kpi-sub" id="kpi-max-disease">データ未読込</div>
                 </div>
             </div>
             <div class="panel">
@@ -218,85 +232,13 @@
                 <div class="consultant-box">
                     <div class="consultant-box-title">💡 推移分析とアドバイス</div>
                     <div class="consultant-box-body" id="summary-analysis-text">
-                        ・ <strong>直近分析結果 (2026/10/19):</strong> 期間Ⅱ超過患者数は <strong>164名</strong>（うち出来高 <strong>45名</strong>）。病床回転率の低下が懸念されます。<br>
-                        ・ <strong>収益構造のボトルネック:</strong> 超過患者の約 27% が利益率の最も低くなる出来高算定（期間Ⅲ超え）へ流出しており、1日あたり大きな逸失利益が発生しています。<br>
-                        ・ <strong>推奨アクション:</strong> 出来高患者（45名）の退院・転院調整を最優先としつつ、「事前検知」タブでリミット目前の予備軍へPFM早期介入を行ってください。<br>
-                        <span style="font-size:11px; color:var(--text-muted); display:inline-block; margin-top:5px;">※最新の「入院期間Ⅱ超え_20261019.xlsx」までの集計推移を反映しています。（詳細データはExcelを読み込んでください）</span>
+                        右上の「📥 最新(または過去)のExcelを読込」ボタンから、分析対象のデータファイルを読み込んでください。（複数ファイルを同時に選択して一括でグラフ化することが可能です。日付は自動的に整列されます。）
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="tab-benchmark" class="tab-pane">
-            <div class="kpi-container">
-                <div class="kpi-box danger">
-                    <div class="kpi-title">推計・機会損失額 (当月概算)</div>
-                    <div class="kpi-value" style="color: var(--accent-red);" id="kpi-loss-amount">- 円</div>
-                    <div class="kpi-sub">実際の超過日数合計 × 約5万円/日で算出</div>
-                </div>
-                <div class="kpi-box warning" onclick="document.getElementById('benchmark-table').scrollIntoView({behavior: 'smooth', block: 'center'})" style="cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" title="クリックでリストへ移動">
-                    <div class="kpi-title">期間Ⅱを慢性的に超過する診療科</div>
-                    <div class="kpi-value" style="color: var(--accent-orange);" id="kpi-delay-count">- 診療科</div>
-                    <div class="kpi-sub">クリティカルパスの見直し、または退院先開拓の推奨ターゲット <strong style="color:var(--accent-blue);">(クリックで一覧へ)</strong></div>
-                </div>
-            </div>
-            <div class="drilldown-container">
-                <div class="panel">
-                    <div class="panel-title">📉 期間Ⅱ(基準値) vs 自院平均 (診療科別バブルチャート)</div>
-                    <div style="height: 320px;"><canvas id="benchmarkChart"></canvas></div>
-                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">💡 対角線より<strong style="color:var(--accent-red);">上（赤）</strong>にあるほど「平均して期間Ⅱを超過している診療科」を示します。</div>
-                </div>
-                <div class="panel">
-                    <div class="panel-title" style="justify-content: flex-start;">
-                        🚨 改善ポテンシャル ワースト診療科
-                        <div class="tooltip-container">
-                            <span class="tooltip-icon">?</span>
-                            <div class="tooltip-box">
-                                <div style="font-weight: bold; font-size: 13px; color: var(--accent-blue); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">💡 このベンチマークの考え方</div>
-                                このシステムでは、「他院の実際のデータ」との比較ではなく、<strong>「国が定めたDPCの基準値（期間Ⅱ）に対して、自院の運用がどれくらいオーバーしているか」</strong>を診療科ごとに評価しています。<br><br>
-                                <strong style="color:var(--accent-blue);">【基準値（期間Ⅱ）】</strong><br>
-                                DPCごとに国が定めている「入院期間Ⅱ」の日数。（※2026年度改定により、期間Ⅱは「全国の平均在院日数」から「中央値」へ変更されています）<br><br>
-                                <strong style="color:var(--accent-blue);">【自院平均】</strong><br>
-                                実際の自院データにおける、その診療科の患者の「平均在院日数」。<br><br>
-                                <strong style="color:var(--accent-blue);">【平均超過（改善ポテンシャル）】</strong><br>
-                                「自院平均」から「基準値」を引いた日数。プラスであるほど「基準よりも慢性的に長く入院している」ことを意味し、この日数の多い順にワースト診療科としてリストアップしています。
-                            </div>
-                        </div>
-                    </div>
-                    <div class="table-scroll-container">
-                        <table id="benchmark-table" class="sub-table" style="margin-top:0;">
-                            <thead style="background-color: rgba(239, 68, 68, 0.1);">
-                                <tr><th>診療科</th><th style="text-align:right;">患者数</th><th style="text-align:right;">期間Ⅱ</th><th style="text-align:right;">自院平均</th><th style="text-align:right;">平均超過</th></tr>
-                            </thead>
-                            <tbody><tr><td colspan="5" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-predict" class="tab-pane">
-            <div class="panel">
-                <div class="panel-title">⚠️ 超過予備軍の検知（散布図クロス分析）</div>
-                <div class="drilldown-container">
-                    <div>
-                        <div style="height: 350px;"><canvas id="scatterChart"></canvas></div>
-                    </div>
-                    <div>
-                        <h3 style="font-size: 13px; color: var(--accent-orange); margin-top: 0;">🚨 超過まで「あと3日以内」のハイリスク患者</h3>
-                        <div class="table-scroll-container" style="max-height: 350px;">
-                            <table id="warning-table" class="sub-table" style="margin-top:0;">
-                                <thead style="background-color: rgba(245, 158, 11, 0.1);">
-                                    <tr><th>主治医 / 科</th><th>疾患名</th><th>在院/期間Ⅱ</th><th>リミット</th></tr>
-                                </thead>
-                                <tbody><tr><td colspan="4" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        <!-- タブ2: 診療科別分析 -->
         <div id="tab-dept" class="tab-pane">
             <div class="panel">
                 <div class="panel-title">🔍 診療科別分析</div>
@@ -304,8 +246,8 @@
                     <div style="height: 300px;"><canvas id="deptChart"></canvas></div>
                     <div class="table-scroll-container">
                         <table id="dept-table">
-                            <thead><tr><th>診療科</th><th>期間II超過</th><th>平均超過日数</th></tr></thead>
-                            <tbody><tr><td colspan="3" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
+                            <thead><tr><th>診療科</th><th>期間II超過</th><th>Ⅱ超率 (目標30%以内)</th><th>平均超過日数</th></tr></thead>
+                            <tbody><tr><td colspan="4" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -313,9 +255,7 @@
                 <div class="consultant-box warning">
                     <div class="consultant-box-title">🎯 推奨アクション</div>
                     <div class="consultant-box-body" id="dept-action-text">
-                        ・ <strong>内科系・総合診療科（高頻度・長滞留）:</strong> 誤嚥性肺炎や脳卒中等の高齢患者に対し、早期から第一病院の回復期リハ病棟や地域包括ケア病棟への転院調整を進め、下り搬送の積極的な活用を徹底してください。<br>
-                        ・ <strong>外科系・整形外科:</strong> 術後パスの期間Ⅱ遵守率をチェックし、リハビリ目的の転院打診を「手術前〜術後直後」から開始する運用ルールへ改善してください。<br>
-                        ・ <strong>共通運用:</strong> 超過患者数上位3科を対象に、ボトルネック分類を実施し、転院・退院打診のタイミングを「入院初期（3日目以内）」へ前倒しすることを強く推奨します。
+                        データを読み込むと、優先して介入すべき診療科とその具体的なアクションがここに表示されます。
                     </div>
                 </div>
 
@@ -334,15 +274,16 @@
             </div>
         </div>
 
+        <!-- タブ3: 病棟別分析 -->
         <div id="tab-ward" class="tab-pane">
             <div class="panel">
                 <div class="panel-title">🛏️ 病棟別 滞留分析</div>
                 <div class="drilldown-container" style="grid-template-columns: 350px 1fr;">
                     
-                    <!-- Left: Ward List and Chart -->
                     <div>
                         <div style="height: 200px; margin-bottom: 20px;"><canvas id="wardChart"></canvas></div>
-                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 10px; color: var(--text-muted);">病棟を選択して詳細を表示</div>
+                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: var(--text-muted);">病棟を選択して詳細を表示</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">※未コーディング患者はカウントされていないため実際の数値と若干の差異があります</div>
                         <div class="table-scroll-container" style="max-height: 400px; border: 1px solid var(--border); border-radius: 6px;">
                             <div id="ward-list-container">
                                 <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 12px;">データがありません</div>
@@ -350,11 +291,10 @@
                         </div>
                     </div>
 
-                    <!-- Right: Ward Details -->
                     <div style="border: 1px solid var(--border); border-radius: 8px; padding: 15px; background: rgba(0,0,0,0.02);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">
                             <h3 style="margin: 0; color: var(--accent-blue);" id="selected-ward-title">病棟を選択してください</h3>
-                            <div class="badge badge-red" id="selected-ward-count" style="display:none; font-size: 14px;"></div>
+                            <div id="selected-ward-count" style="display:none; font-size: 16px; font-weight:bold; align-items:center;"></div>
                         </div>
 
                         <div id="ward-detail-content" style="display: none;">
@@ -385,6 +325,7 @@
             </div>
         </div>
 
+        <!-- タブ4: 長期滞留リスト -->
         <div id="tab-action" class="tab-pane">
             <div class="panel">
                 <div class="panel-title">🚨 緊急介入対象：長期滞留リスト</div>
@@ -399,6 +340,81 @@
             </div>
         </div>
 
+        <!-- タブ5: 期間Ⅱ基準ベンチマーク -->
+        <div id="tab-benchmark" class="tab-pane">
+            <div class="kpi-container">
+                <div class="kpi-box danger">
+                    <div class="kpi-title">推計・機会損失額 (当月概算)</div>
+                    <div class="kpi-value" style="color: var(--accent-red);" id="kpi-loss-amount">- 円</div>
+                    <div class="kpi-sub">実際の超過日数合計 × 約5万円/日で算出</div>
+                </div>
+                <div class="kpi-box warning" onclick="document.getElementById('benchmark-table').scrollIntoView({behavior: 'smooth', block: 'start'})" style="cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" title="クリックでリストへ移動">
+                    <div class="kpi-title">期間Ⅱを慢性的に超過する診療科</div>
+                    <div class="kpi-value" style="color: var(--accent-orange);" id="kpi-delay-count">- 診療科</div>
+                    <div class="kpi-sub">クリティカルパスの見直し、または退院先開拓の推奨ターゲット <strong style="color:var(--accent-blue);">(クリックで一覧へ)</strong></div>
+                </div>
+            </div>
+            <div class="drilldown-container">
+                <div class="panel">
+                    <div class="panel-title">📉 期間Ⅱ(基準値) vs 自院平均 (診療科別バブルチャート)</div>
+                    <div style="height: 320px;"><canvas id="benchmarkChart"></canvas></div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">💡 対角線より<strong style="color:var(--accent-red);">上（赤）</strong>にあるほど「平均して期間Ⅱを超過している診療科」を示します。</div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title" style="justify-content: flex-start;">
+                        🚨 改善ポテンシャル ワースト診療科
+                        <div class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <div class="tooltip-box">
+                                このシステムにおける「改善ポテンシャル ワースト診療科」のベンチマークについては、全国平均との比較ではなく、DPCの「期間Ⅱ（基準値）」に対する、自院の平均在院日数との比較です。<br>
+                                具体的には、以下の考え方で算出されています。<br><br>
+                                <strong style="color:var(--accent-blue);">【基準値（期間Ⅱ）】</strong><br>
+                                DPCごとに国が定めている「入院期間Ⅱ」の日数を基準としています。<br>
+                                （※2026年度の改定により、期間Ⅱはこれまでの「全国の平均在院日数」から「中央値」へ変更されています。システム内の項目名が「全国平均」ではなく「期間Ⅱ基準」となっているのはそのためです）<br><br>
+                                <strong style="color:var(--accent-blue);">【自院平均】</strong><br>
+                                実際の自院のデータにおいて、その診療科における患者の「平均在院日数」を計算しています。<br><br>
+                                <strong style="color:var(--accent-blue);">【改善ポテンシャル（超過）】</strong><br>
+                                「自院平均」から「基準値（期間Ⅱ）」を引いた日数が、プラスであればあるほど、その診療科は「基準よりも慢性的に長く入院している」ことを意味します。これが改善ポテンシャル（超過日数）として表示され、上位からワースト診療科としてリストアップされています。<br><br>
+                                つまり、「他院と比べてどうか」という外部データ（全国の他病院の実際のデータ）との比較ではなく、<strong>「国が定めたDPCの基準値（期間Ⅱ）に対して、自院の運用がどれくらいオーバーしているか」</strong>を診療科ごとに集計・評価しているものになります。
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-scroll-container">
+                        <table id="benchmark-table" class="sub-table" style="margin-top:0;">
+                            <thead style="background-color: rgba(239, 68, 68, 0.1);">
+                                <tr><th>診療科</th><th style="text-align:right;">患者数</th><th style="text-align:right;">期間Ⅱ</th><th style="text-align:right;">自院平均</th><th style="text-align:right;">平均超過</th></tr>
+                            </thead>
+                            <tbody><tr><td colspan="5" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- タブ6: 事前検知 -->
+        <div id="tab-predict" class="tab-pane">
+            <div class="panel">
+                <div class="panel-title">⚠️ 超過予備軍の検知（散布図クロス分析）</div>
+                <div class="drilldown-container">
+                    <div>
+                        <div style="height: 350px;"><canvas id="scatterChart"></canvas></div>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 13px; color: var(--accent-orange); margin-top: 0;">🚨 超過まで「あと3日以内」のハイリスク患者</h3>
+                        <div class="table-scroll-container" style="max-height: 350px;">
+                            <table id="warning-table" class="sub-table" style="margin-top:0;">
+                                <thead style="background-color: rgba(245, 158, 11, 0.1);">
+                                    <tr><th>主治医 / 科</th><th>疾患名</th><th>在院/期間Ⅱ</th><th>リミット</th></tr>
+                                </thead>
+                                <tbody><tr><td colspan="4" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- タブ7: カンバン -->
         <div id="tab-kanban" class="tab-pane">
             <div class="panel">
                 <div class="panel-title">📋 退院調整カンバンボード (ドラッグ＆ドロップで移動)</div>
@@ -424,6 +440,7 @@
         </div>
     </div>
 
+    <!-- 管理者パネル -->
     <div id="admin-panel" class="closed">
         <div class="admin-header" onclick="toggleAdminPanel()"><span>⚙️ 管理者メニュー</span><span class="toggle-icon">▲</span></div>
         <div class="admin-content">
@@ -439,6 +456,7 @@
         </div>
     </div>
 
+    <!-- 患者モーダル -->
     <div id="patient-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -475,34 +493,26 @@
         let chartTrend, chartBenchmark, chartScatter, chartDept, chartWard, chartWardDept;
         let currentParsedData = []; 
         let patientDataMap = {}; 
-        let wardDataMap = {}; // Holds data grouped by ward
+        let wardDataMap = {}; 
+        window.trendDataMap = {}; 
+        window.allRawDataMap = {}; 
 
         Chart.defaults.color = '#64748b';
         Chart.defaults.font.family = "'Helvetica Neue', 'Hiragino Sans', sans-serif";
 
-        // Toast Notification Function
         function showToast(message, isError = false) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = 'toast-message';
             toast.style.backgroundColor = isError ? 'var(--accent-red)' : 'var(--accent-blue)';
             toast.innerHTML = (isError ? '❌ ' : 'ℹ️ ') + message;
-            
             container.appendChild(toast);
-            
-            // Trigger reflow for animation
             setTimeout(() => toast.classList.add('show'), 10);
-            
-            // Remove after delay
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 4000);
         }
 
         function sysLogin() {
             const pwInput = document.getElementById('sys-pw');
-            // Password logic kept as requested, but visual hint removed from HTML
             if (pwInput.value === 'byousyou') {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-content').style.display = 'block';
@@ -536,17 +546,13 @@
                     showToast('お使いのブラウザは全画面表示に対応していません', true);
                 });
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
+                if (document.exitFullscreen) document.exitFullscreen();
             }
         }
 
         document.addEventListener('fullscreenchange', () => {
             const btn = document.getElementById('fullscreen-btn');
-            if (btn) {
-                btn.innerText = document.fullscreenElement ? '🔳 元に戻す' : '🔲 全画面表示';
-            }
+            if (btn) btn.innerText = document.fullscreenElement ? '🔳 元に戻す' : '🔲 全画面表示';
         });
 
         function switchTab(tabId, btn) {
@@ -583,36 +589,32 @@
             document.getElementById('admin-pw').value = '';
         }
 
-        function exportAction() {
-            showToast('経営層向けエクスポート機能は現在実装中です');
-        }
+        function exportAction() { showToast('経営層向けエクスポート機能は現在実装中です'); }
 
         function initCharts() {
             chartTrend = new Chart(document.getElementById('trendChart').getContext('2d'), {
                 type: 'line',
                 data: { 
-                    labels: ['8/10', '8/17', '8/24', '8/31', '9/7', '9/14', '9/28', '10/5', '10/19(今週)'], 
+                    labels: [], 
                     datasets: [
-                        { label: '期間II超過', data: [142, 148, 155, 145, 152, 156, 161, 158, 164], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2, fill: true, tension: 0.4 },
-                        { label: 'うち出来高', data: [30, 32, 35, 33, 38, 40, 42, 41, 45], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 2, fill: true, tension: 0.4 }
+                        { label: '期間II超過', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2, fill: true, tension: 0.4 },
+                        { label: 'うち出来高', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 2, fill: true, tension: 0.4 }
                     ]
                 }, 
-                options: { responsive: true, maintainAspectRatio: false }
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
             });
 
-            // Benchmark
             chartBenchmark = new Chart(document.getElementById('benchmarkChart').getContext('2d'), {
                 type: 'bubble',
                 data: { datasets: [{ label: '診療科', data: [], backgroundColor: 'rgba(245, 158, 11, 0.5)' }, { type: 'line', label: '基準線', data: [{x:0,y:0},{x:100,y:100}], borderColor: 'rgba(148,163,184,0.5)', borderDash: [5,5], fill: false }] },
                 options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
+                    responsive: true, maintainAspectRatio: false, 
                     plugins: { 
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    if (context.datasetIndex === 1) return '基準線'; // 点線のツールチップ
+                                    if (context.datasetIndex === 1) return '基準線'; 
                                     const raw = context.raw;
                                     return [
                                         `診療科: ${raw.name}`,
@@ -628,13 +630,11 @@
                 }
             });
 
-            // Scatter (Predict)
             chartScatter = new Chart(document.getElementById('scatterChart').getContext('2d'), {
                 type: 'scatter', 
                 data: { datasets: [{ label: '患者', data: [], backgroundColor: '#38bdf8' }, { type: 'line', data: [{x:0,y:0},{x:100,y:100}], borderColor: 'rgba(239,68,68,0.5)', borderDash: [5,5], fill: false }] },
                 options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
+                    responsive: true, maintainAspectRatio: false, 
                     plugins: { 
                         legend: { display: false },
                         tooltip: {
@@ -645,15 +645,15 @@
                                     const p = patientDataMap[raw.patientId];
                                     if (!p) return `(x: ${raw.x}, y: ${raw.y})`;
 
-                                    const remain = raw.x - raw.y; // 期間Ⅱ - 在院日数
+                                    const remain = raw.x - raw.y;
                                     let statusStr = "";
                                     if (remain > 0) statusStr = `⚠️ あと ${remain} 日で超過`;
                                     else if (remain === 0) statusStr = `🚨 本日がリミット`;
                                     else statusStr = `❌ 超過 ${Math.abs(remain)} 日`;
 
                                     return [
-                                        `患者: ${p.details.name} (${p.dept.replace("総）","")})`,
-                                        `主治医: ${p.doctor}`,
+                                        `患者: ${p.details.name}`,
+                                        `診療科: ${p.dept.replace("総）","")} / 主治医: ${p.doctor}`,
                                         `疾患名: ${p.disease}`,
                                         `在院: ${raw.y}日 / 期間Ⅱ: ${raw.x}日`,
                                         `${statusStr}`
@@ -662,22 +662,15 @@
                             }
                         }
                     },
-                    scales: { 
-                        x: { title: { display: true, text: 'DPC 期間Ⅱ (リミット日数)' } }, 
-                        y: { title: { display: true, text: '現在の 在院日数' } } 
-                    },
+                    scales: { x: { title: { display: true, text: 'X軸: DPC期間Ⅱ (リミット日数)' } }, y: { title: { display: true, text: 'Y軸: 現在の在院日数' } } },
                     onClick: (e, el) => { if(el.length>0 && el[0].datasetIndex===0) openPatientModal(chartScatter.data.datasets[0].data[el[0].index].patientId); } 
                 }
             });
 
-            // Dept Bar Chart
             chartDept = new Chart(document.getElementById('deptChart').getContext('2d'), {
                 type: 'bar', data: { labels: [], datasets: [{ label: '超過患者数', data: [], backgroundColor: '#ef4444', borderRadius: 4 }] },
                 options: { 
-                    indexAxis: 'y', 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { display: false } },
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                     onClick: (e, elements) => {
                         if (elements.length > 0) {
                             const idx = elements[0].index;
@@ -688,13 +681,11 @@
                 }
             });
 
-            // Ward Main Bar Chart
             chartWard = new Chart(document.getElementById('wardChart').getContext('2d'), {
                 type: 'bar', data: { labels: [], datasets: [{ label: '超過患者数', data: [], backgroundColor: '#38bdf8', borderRadius: 4 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
 
-            // Ward Details Doughnut Chart
             chartWardDept = new Chart(document.getElementById('wardDeptChart').getContext('2d'), {
                 type: 'doughnut', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'], borderWidth: 0 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: {size: 10} } } }, cutout: '70%' }
@@ -702,50 +693,114 @@
         }
 
         function handleFileSelect(event) {
-            const file = event.target.files[0]; if (!file) return;
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
             
-            const match = file.name.match(/_?(\d{8})/);
-            const dStr = match ? match[1] : null;
-            const displayDateStr = dStr ? `${dStr.substring(0,4)}/${Number(dStr.substring(4,6))}/${Number(dStr.substring(6,8))}` : new Date().toLocaleDateString();
+            const tooltip = document.getElementById('onboarding-tooltip');
+            if (tooltip) tooltip.style.display = 'none';
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: "" });
-                    
-                    let headIdx = 0;
-                    for (let i = 0; i < Math.min(10, rawData.length); i++) {
-                        if (rawData[i].join('').includes('主治医')) { headIdx = i; break; }
+            let processedCount = 0;
+
+            files.forEach(file => {
+                const match = file.name.match(/_?(\d{8})/);
+                const dStr = match ? match[1] : null;
+                const displayDateStr = dStr ? `${dStr.substring(0,4)}/${dStr.substring(4,6)}/${dStr.substring(6,8)}` : new Date().toLocaleDateString();
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: "" });
+                        
+                        let headIdx = 0;
+                        for (let i = 0; i < Math.min(10, rawData.length); i++) {
+                            if (rawData[i].join('').includes('主治医')) { headIdx = i; break; }
+                        }
+                        const headers = rawData[headIdx];
+                        const jsonData = [];
+                        for (let i = headIdx + 1; i < rawData.length; i++) {
+                            const row = {}; let hasData = false;
+                            rawData[i].forEach((val, cIdx) => { row[headers[cIdx] || `C${cIdx}`] = val; if(val!=="") hasData=true; });
+                            if (hasData) jsonData.push(row);
+                        }
+                        
+                        window.allRawDataMap[displayDateStr] = jsonData;
+                        extractTrendData(jsonData, displayDateStr);
+                        
+                        processedCount++;
+                        
+                        // 全てのファイルが処理されたタイミングで、最新日付を探して更新
+                        if (processedCount === files.length) {
+                            drawTrendChart();
+                            
+                            let latestDateStr = "";
+                            let maxTime = 0;
+                            // 保持している全ての日付をミリ秒単位で比較し、一番新しい日付を算出
+                            for (let key in window.allRawDataMap) {
+                                const t = new Date(key).getTime();
+                                if (t > maxTime) { maxTime = t; latestDateStr = key; }
+                            }
+                            
+                            // 必ず一番新しい日付のデータで分析タブを更新する
+                            updateDashboardWithData(window.allRawDataMap[latestDateStr], latestDateStr);
+                            
+                            showToast(`${files.length}件のファイルの読み込みと分析が完了しました。`);
+                            document.getElementById('header-date').innerText = `分析対象: ${latestDateStr} 実データ`;
+                        }
+                    } catch (err) { 
+                        showToast(`${file.name} の解析に失敗しました。`, true); 
+                        console.error(err); 
                     }
-                    const headers = rawData[headIdx];
-                    const jsonData = [];
-                    for (let i = headIdx + 1; i < rawData.length; i++) {
-                        const row = {}; let hasData = false;
-                        rawData[i].forEach((val, cIdx) => { row[headers[cIdx] || `C${cIdx}`] = val; if(val!=="") hasData=true; });
-                        if (hasData) jsonData.push(row);
+                };
+                reader.readAsArrayBuffer(file);
+            });
+            event.target.value = '';
+        }
+
+        function extractTrendData(data, displayDateStr) {
+            const getVal = (r, keys) => { for (let k of keys) { if (r[k] !== undefined && r[k] !== "") return r[k]; } return ""; };
+            let totalOver = 0;
+            let totalDekidaka = 0;
+            data.forEach(row => {
+                const dept = String(getVal(row, ["科名", "診療科"]) || "");
+                if (dept.includes("総）") || dept.includes("総)")) {
+                    const overStr = getVal(row, ["超過", "超過日数", "入院期間Ⅱに対して"]);
+                    const overNum = Math.max(0, parseInt(String(overStr).replace(/[^0-9\-]/g, ''), 10) || 0);
+                    if (overNum > 0) {
+                        totalOver++;
+                        const typeStr = getVal(row, ["現在の入院期間", "区分"]) || "";
+                        if (typeStr.includes("出来高")) totalDekidaka++;
                     }
-                    updateDashboardWithData(jsonData, displayDateStr);
-                    showToast('データの読み込みと分析が完了しました。');
-                } catch (err) { 
-                    showToast('ファイルの解析に失敗しました。DPC形式のExcelか確認してください。', true); 
-                    console.error(err); 
                 }
-            };
-            reader.readAsArrayBuffer(file);
-            event.target.value = ''; // Reset input
+            });
+            window.trendDataMap[displayDateStr] = { over: totalOver, dekidaka: totalDekidaka, dateObj: new Date(displayDateStr) };
+        }
+
+        function drawTrendChart() {
+            const sortedTrendKeys = Object.keys(window.trendDataMap).sort((a, b) => window.trendDataMap[a].dateObj - window.trendDataMap[b].dateObj);
+            chartTrend.data.labels = [];
+            chartTrend.data.datasets[0].data = [];
+            chartTrend.data.datasets[1].data = [];
+            sortedTrendKeys.forEach(key => {
+                const dataObj = window.trendDataMap[key];
+                const parts = key.split('/');
+                const shortLabel = parts.length >= 3 ? `${Number(parts[1])}/${Number(parts[2])}` : key;
+                chartTrend.data.labels.push(shortLabel);
+                chartTrend.data.datasets[0].data.push(dataObj.over);
+                chartTrend.data.datasets[1].data.push(dataObj.dekidaka);
+            });
+            chartTrend.update();
         }
 
         function updateDashboardWithData(data, displayDateStr) {
-            document.getElementById('header-date').innerText = `分析対象: ${displayDateStr} 実データ`;
-            
             document.getElementById('dept-patient-container').style.display = 'none'; 
             
             const getVal = (r, keys) => { for (let k of keys) { if (r[k] !== undefined && r[k] !== "") return r[k]; } return ""; };
             patientDataMap = {};
-            wardDataMap = {}; // Reset ward data
+            wardDataMap = {}; 
 
+            // 総）のみを抽出
             const parsedData = data.map((row, index) => {
                 const stayStr = getVal(row, ["在院日数", "在院", "入院日数"]);
                 const overStr = getVal(row, ["超過", "超過日数", "入院期間Ⅱに対して"]);
@@ -772,65 +827,129 @@
             }).filter(i => String(i.dept).includes("総）") || String(i.dept).includes("総)"));
 
             const overData = parsedData.filter(i => i.over > 0);
-            currentParsedData = overData;
+            currentParsedData = overData; // 分析で利用するのは超過データ
             const totalOver = overData.length;
             const totalDekidaka = overData.filter(r => r.type.includes("出来高")).length;
-
-            let labelParts = displayDateStr.split('/');
-            const newDateLabel = labelParts.length >= 3 ? `${Number(labelParts[1])}/${Number(labelParts[2])}` : displayDateStr;
-            const newLabel = `${newDateLabel}(今週)`;
-
-            const labels = chartTrend.data.labels;
-            const d1 = chartTrend.data.datasets[0].data;
-            const d2 = chartTrend.data.datasets[1].data;
-            
-            const lastDateLabel = (labels[labels.length - 1] || "").replace('(今週)', '').trim();
-            if (lastDateLabel === newDateLabel) {
-                labels[labels.length - 1] = newLabel; 
-                d1[d1.length - 1] = totalOver; 
-                d2[d2.length - 1] = totalDekidaka;
-            } else {
-                if(labels[labels.length - 1]) labels[labels.length - 1] = lastDateLabel;
-                labels.shift(); labels.push(newLabel); 
-                d1.shift(); d1.push(totalOver); 
-                d2.shift(); d2.push(totalDekidaka);
-            }
-            chartTrend.update();
 
             document.getElementById('kpi-over-total').innerText = `${totalOver} 名`;
             document.getElementById('kpi-over-sub').innerText = `内訳: 出来高 ${totalDekidaka}名 / 期間III ${totalOver-totalDekidaka}名`;
             const maxP = [...overData].sort((a,b)=>b.stay-a.stay)[0];
-            if(maxP) { document.getElementById('kpi-max-stay').innerText = `${maxP.stay} 日`; document.getElementById('kpi-max-disease').innerText = `${maxP.disease} (${maxP.dept})`; }
+            if(maxP) { document.getElementById('kpi-max-stay').innerText = `${maxP.stay} 日`; document.getElementById('kpi-max-disease').innerText = `${maxP.disease} (${maxP.dept.replace("総）","")})`; }
 
             document.getElementById('summary-analysis-text').innerHTML = `
-                ・ <strong>直近分析結果 (${displayDateStr}):</strong> 期間Ⅱ超過患者数は <strong>${totalOver}名</strong>（うち出来高 <strong>${totalDekidaka}名</strong>）。病床回転率の停滞が顕著です。<br>
+                ・ <strong>直近分析結果 (${displayDateStr}):</strong> 期間Ⅱ超過患者数は <strong>${totalOver}名</strong>（うち出来高 <strong>${totalDekidaka}名</strong>）。<br>
                 ・ <strong>収益構造のボトルネック:</strong> 超過患者の約 ${(totalOver > 0 ? ((totalDekidaka/totalOver)*100).toFixed(0) : 0)}% が利益率の最も低くなる出来高算定（期間Ⅲ超え）へ流出しており、1日あたり大きな逸失利益が発生しています。<br>
-                ・ <strong>推奨アクション:</strong> 出来高患者（${totalDekidaka}名）の退院・転院調整を最優先としつつ、「事前検知」タブでリミット目前の患者へPFM早期介入を行ってください。
+                ・ <strong>推奨アクション:</strong> 出来高患者（${totalDekidaka}名）の退院・転院調整を最優先としつつ、「事前検知」タブでリミット目前の患者へ主治医による早期退院許可を促してください。
             `;
 
-            const deptBenchStats = {};
-            let totalLoss = 0; // Initialize total loss correctly
+            // 診療科分析ロジック
+            const deptStats = {}; 
+            parsedData.forEach(i => { 
+                const d = i.dept.replace("総）","").trim() || "不明"; 
+                if(!deptStats[d]) deptStats[d] = { total: 0, overCount: 0, overDays: 0 }; 
+                deptStats[d].total++; 
+                if (i.over > 0) {
+                    deptStats[d].overCount++;
+                    deptStats[d].overDays += i.over;
+                }
+            });
+            
+            const deptArr = Object.keys(deptStats).map(k => {
+                const stat = deptStats[k];
+                const rate = stat.total > 0 ? (stat.overCount / stat.total * 100) : 0;
+                const targetOverCount = Math.floor(stat.total * 0.30);
+                const needReduce = stat.overCount - targetOverCount;
+                return { n: k, total: stat.total, c: stat.overCount, avg: stat.overCount > 0 ? (stat.overDays / stat.overCount).toFixed(1) : "0.0", rate: rate.toFixed(1), needReduce: needReduce > 0 ? needReduce : 0 };
+            }).sort((a,b) => b.c - a.c);
+            
+            const top8 = deptArr.slice(0,8);
+            chartDept.data.labels = top8.map(d=>d.n); chartDept.data.datasets[0].data = top8.map(d=>d.c); chartDept.update();
+            
+            document.querySelector("#dept-table tbody").innerHTML = deptArr.map(d => {
+                const reduceHtml = d.needReduce > 0 
+                    ? `<br><span style="font-size:11px;color:var(--accent-red);font-weight:bold;">⚠️ あと <span style="font-size:18px;">${d.needReduce}</span> 名 退院必要</span>` 
+                    : `<br><span style="font-size:11px;color:#10b981;font-weight:bold;">✅ 目標クリア</span>`;
+                return `<tr onclick="selectDept('${d.n}')" style="cursor:pointer;" title="クリックして患者リストを表示">
+                    <td><strong>${d.n}</strong><br><span style="font-size:10px;color:var(--text-muted);">総患者: ${d.total}名</span></td>
+                    <td style="color:var(--accent-red);font-weight:bold;">${d.c}名</td>
+                    <td style="font-weight:bold; color:${d.rate > 30 ? 'var(--accent-red)' : '#10b981'};">${d.rate}% ${reduceHtml}</td>
+                    <td style="color:var(--accent-orange);">+${d.avg}日</td>
+                </tr>`;
+            }).join('');
 
+            const priorityDepts = deptArr.filter(d => d.needReduce > 0).sort((a,b) => b.needReduce - a.needReduce);
+            const top1 = priorityDepts[0];
+            const top2 = priorityDepts[1];
+            document.getElementById('dept-action-text').innerHTML = `
+                ・ <strong>最優先介入科（${top1 ? top1.n : '該当なし'}）:</strong> Ⅱ超率が <strong>${top1 ? top1.rate : 0}%</strong> となっており、目標の30%を達成するためには <strong>あと <span style="font-size:18px;color:var(--accent-red);">${top1 ? top1.needReduce : 0}</span> 名</strong> の超過患者を早期に退院させる調整が急務です。リストから期間Ⅱリミットが近い患者を特定し、主治医へ早期退院許可の判断を促すアナウンスを強化してください。<br>
+                ・ <strong>次順位（${top2 ? top2.n : '該当なし'}等）:</strong> Ⅱ超率 ${top2 ? top2.rate : 0}%（削減目標: <strong>あと <span style="font-size:16px;color:var(--accent-red);">${top2 ? top2.needReduce : 0}</span> 名</strong>）。術後パスおよび診療プロセスの期間Ⅱ遵守率を検証し、退院打診のタイミングを「入院初期（3日目以内）」へ徹底して早めるよう主治医へ促してください。<br>
+                ・ <strong>全科共通アクション:</strong> Ⅱ超率30%超えの診療科を対象に、滞留患者の『ボトルネック理由』を分類し、カンバンタブでステータスを可視化して毎週追跡することを強く推奨します。
+            `;
+
+            // 病棟分析ロジック
+            parsedData.forEach(i => {
+                const w = i.ward || "不明";
+                if(!wardDataMap[w]) wardDataMap[w] = { name: w, total: 0, count: 0, patients: [], depts: {} };
+                wardDataMap[w].total++;
+                if (i.over > 0) {
+                    wardDataMap[w].count++;
+                    wardDataMap[w].patients.push(i);
+                    const cleanDept = i.dept.replace("総）","").trim() || "不明";
+                    if(!wardDataMap[w].depts[cleanDept]) wardDataMap[w].depts[cleanDept] = 0;
+                    wardDataMap[w].depts[cleanDept]++;
+                }
+            });
+
+            const wardArr = Object.values(wardDataMap).map(w => {
+                w.rate = w.total > 0 ? (w.count / w.total * 100) : 0;
+                w.needReduce = w.count - Math.floor(w.total * 0.30);
+                return w;
+            }).sort((a,b) => b.count - a.count);
+            
+            const topWards = wardArr.slice(0, 10); 
+            chartWard.data.labels = topWards.map(w => w.name);
+            chartWard.data.datasets[0].data = topWards.map(w => w.count);
+            chartWard.update();
+
+            const wardListHtml = wardArr.map((w, idx) => {
+                const rateColor = w.rate > 30 ? 'var(--accent-red)' : '#10b981';
+                return `
+                <div class="ward-list-item ${idx===0?'active':''}" onclick="selectWard('${w.name}', this)">
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <span class="ward-name">${w.name}</span>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="ward-count" style="margin-bottom:4px; color: ${rateColor}; border: 1px solid ${rateColor};">${w.count}名 (Ⅱ超率${w.rate.toFixed(1)}%)</div>
+                        ${w.needReduce > 0 ? `<div style="font-size:11px; color:var(--accent-red); font-weight:bold;">Ⅱ超率患者 <span style="font-size:16px;">${w.needReduce}</span>名超過</div>` : `<div style="font-size:11px; color:#10b981; font-weight:bold;">✅ 目標クリア</div>`}
+                    </div>
+                </div>
+            `}).join('') || `<div style="padding: 20px; text-align: center;">データなし</div>`;
+            document.getElementById('ward-list-container').innerHTML = wardListHtml;
+
+            if (wardArr.length > 0) renderWardDetails(wardArr[0].name);
+            else {
+                document.getElementById('ward-detail-content').style.display = 'none';
+                document.getElementById('ward-detail-empty').style.display = 'block';
+                document.getElementById('selected-ward-title').innerText = '病棟を選択してください';
+                document.getElementById('selected-ward-count').style.display = 'none';
+            }
+
+            // ベンチマーク・事前検知などのロジック
+            const deptBenchStats = {};
+            let totalLoss = 0; 
             parsedData.forEach(item => { 
                 const cleanDept = item.dept.replace(/第[）\)]|総[）\)]/g, "").trim() || "不明";
-                
                 if(item.kikan2Num > 0) {
-                    if(!deptBenchStats[cleanDept]) {
-                        deptBenchStats[cleanDept] = { name: cleanDept, totalStay: 0, count: 0, kikan2Sum: 0, validKikan2Count: 0, overCount: 0, specificLoss: 0 }; 
-                    }
-                    
+                    if(!deptBenchStats[cleanDept]) deptBenchStats[cleanDept] = { name: cleanDept, totalStay: 0, count: 0, kikan2Sum: 0, validKikan2Count: 0, overCount: 0, specificLoss: 0 }; 
                     deptBenchStats[cleanDept].totalStay += item.stay; 
                     deptBenchStats[cleanDept].count++; 
                     deptBenchStats[cleanDept].kikan2Sum += item.kikan2Num;
                     deptBenchStats[cleanDept].validKikan2Count++;
-                    
-                    // Calculate specific loss for each patient who is actually over
                     if (item.over > 0) {
                         deptBenchStats[cleanDept].overCount++;
-                        // Approx 50,000 yen loss per over day
                         const patientLoss = item.over * 50000;
                         deptBenchStats[cleanDept].specificLoss += patientLoss;
-                        totalLoss += patientLoss; // Add to global total loss
+                        totalLoss += patientLoss; 
                     }
                 }
             });
@@ -841,12 +960,7 @@
                     stat.myAverage = Math.round((stat.totalStay / stat.count) * 10) / 10;
                     stat.targetDays = Math.round((stat.kikan2Sum / stat.validKikan2Count) * 10) / 10;
                     stat.diff = Math.round((stat.myAverage - stat.targetDays) * 10) / 10;
-                    
-                    // Count departments where average is over target
-                    if(stat.diff > 0) { 
-                        delayCount++; 
-                    }
-                    // Assign the accurately calculated loss
+                    if(stat.diff > 0) delayCount++; 
                     stat.loss = stat.specificLoss;
                     benchmarkData.push(stat);
                 }
@@ -863,7 +977,6 @@
             chartBenchmark.data.datasets[1].data = [{x:0,y:0},{x:maxBench+5,y:maxBench+5}];
             chartBenchmark.options.scales.x.max = maxBench+5; chartBenchmark.options.scales.y.max = maxBench+5; chartBenchmark.update();
 
-            // Table sorted by average excess days (diff) - Showing all instead of top 5
             document.querySelector("#benchmark-table tbody").innerHTML = benchmarkData.filter(d=>d.diff>0).sort((a,b)=>b.diff-a.diff).map(s => `<tr><td><strong style="color:var(--accent-blue);">${s.name}</strong></td><td style="text-align:right;">${s.count}名<br><span style="font-size:10px;color:var(--accent-red);">うち超過 ${s.overCount}名</span></td><td style="text-align:right;">${s.targetDays}日</td><td style="text-align:right;">${s.myAverage}日</td><td style="text-align:right;color:var(--accent-red);font-weight:bold;">+${s.diff>0?s.diff:0}日<br><span style="font-size:10px;color:var(--text-muted);">(-${(s.loss/10000).toFixed(0)}万)</span></td></tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">該当なし</td></tr>`;
 
             let maxKikan=20; const scatterData=[];
@@ -875,71 +988,13 @@
 
             document.querySelector("#warning-table tbody").innerHTML = parsedData.filter(i=>i.kikan2Num>0&&i.kikan2Num>=i.stay&&(i.kikan2Num-i.stay)<=3).sort((a,b)=>(a.kikan2Num-a.stay)-(b.kikan2Num-b.stay)).map(p=>`<tr onclick="openPatientModal('${p.id}')" style="cursor:pointer;"><td><strong>${p.doctor}</strong><br><span style="font-size:10px;color:var(--text-muted);">${p.dept.replace("総）","")}</span></td><td style="color:var(--accent-blue);">${p.disease}</td><td>${p.stay} / ${p.kikan2Num}</td><td><span class="badge badge-orange" style="background-color:var(--accent-orange);color:white;">あと ${p.kikan2Num-p.stay} 日</span></td></tr>`).join('') || `<tr><td colspan="4" style="text-align:center;">予備軍なし</td></tr>`;
 
-            const deptStats = {}; overData.forEach(i => { const d=i.dept.replace("総）","").trim()||"不明"; if(!deptStats[d]) deptStats[d]={c:0, o:0}; deptStats[d].c++; deptStats[d].o+=i.over; });
-            const deptArr = Object.keys(deptStats).map(k=>({n:k, c:deptStats[k].c, avg:(deptStats[k].o/deptStats[k].c).toFixed(1)})).sort((a,b)=>b.c-a.c);
-            const top8 = deptArr.slice(0,8);
-            chartDept.data.labels = top8.map(d=>d.n); chartDept.data.datasets[0].data = top8.map(d=>d.c); chartDept.update();
-            document.querySelector("#dept-table tbody").innerHTML = deptArr.map(d=>`<tr onclick="selectDept('${d.n}')" style="cursor:pointer;" title="クリックして患者リストを表示"><td><strong>${d.n}</strong></td><td style="color:var(--accent-red);font-weight:bold;">${d.c}名</td><td style="color:var(--accent-orange);">+${d.avg}日</td></tr>`).join('');
-
-            const top1Dept = deptArr[0] ? deptArr[0].n : "上位診療科";
-            const top1Count = deptArr[0] ? deptArr[0].c : 0;
-            const top2Dept = deptArr[1] ? deptArr[1].n : "次順位科";
-
-            document.getElementById('dept-action-text').innerHTML = `
-                ・ <strong>最優先介入科（${top1Dept}）:</strong> 超過患者数 <strong>${top1Count}名</strong> と最も滞留が集中しています。早期に第一病院の回復期リハ病棟や地域包括ケア病棟への転院方針を固め、協力医療機関への下り搬送を積極的に活用して期間Ⅱ以内の退院を推進してください。<br>
-                ・ <strong>次順位（${top2Dept}等）:</strong> 術後パスおよび診療プロセスの期間Ⅱ遵守率を検証し、転院・退院打診のタイミングを「入院初期（3日目以内）」へ徹底して早めてください。<br>
-                ・ <strong>全科共通アクション:</strong> 滞留患者の『ボトルネック理由（第一病院空き待ち／家族意向調整／施設待機等）』を分類し、カンバンタブでステータスを見える化して毎週追跡してください。
-            `;
-
-            // Process data for new Ward Tab
-            overData.forEach(i => {
-                const w = i.ward || "不明";
-                if(!wardDataMap[w]) wardDataMap[w] = { name: w, count: 0, patients: [], depts: {} };
-                wardDataMap[w].count++;
-                wardDataMap[w].patients.push(i);
-                
-                const cleanDept = i.dept.replace("総）","").trim() || "不明";
-                if(!wardDataMap[w].depts[cleanDept]) wardDataMap[w].depts[cleanDept] = 0;
-                wardDataMap[w].depts[cleanDept]++;
-            });
-
-            const wardArr = Object.values(wardDataMap).sort((a,b) => b.count - a.count);
-            
-            // Update Ward Chart
-            const topWards = wardArr.slice(0, 10); // Show top 10 in small bar chart
-            chartWard.data.labels = topWards.map(w => w.name);
-            chartWard.data.datasets[0].data = topWards.map(w => w.count);
-            chartWard.update();
-
-            // Render Ward List
-            const wardListHtml = wardArr.map((w, idx) => `
-                <div class="ward-list-item ${idx===0?'active':''}" onclick="selectWard('${w.name}', this)">
-                    <span class="ward-name">${w.name}</span>
-                    <span class="ward-count">${w.count}名</span>
-                </div>
-            `).join('') || `<div style="padding: 20px; text-align: center;">データなし</div>`;
-            document.getElementById('ward-list-container').innerHTML = wardListHtml;
-
-            // Select first ward automatically if data exists
-            if (wardArr.length > 0) {
-                renderWardDetails(wardArr[0].name);
-            } else {
-                document.getElementById('ward-detail-content').style.display = 'none';
-                document.getElementById('ward-detail-empty').style.display = 'block';
-                document.getElementById('selected-ward-title').innerText = '病棟を選択してください';
-                document.getElementById('selected-ward-count').style.display = 'none';
-            }
-
-            // Render existing tables
             renderActionTable(overData); 
             renderKanbanBoard(overData);
         }
 
         function selectWard(wardName, element) {
-            // Update active state in list
             document.querySelectorAll('.ward-list-item').forEach(el => el.classList.remove('active'));
             if(element) element.classList.add('active');
-            
             renderWardDetails(wardName);
         }
 
@@ -950,24 +1005,24 @@
             document.getElementById('ward-detail-empty').style.display = 'none';
             document.getElementById('ward-detail-content').style.display = 'block';
             
-            // Update Header
             document.getElementById('selected-ward-title').innerText = wardName;
             const countEl = document.getElementById('selected-ward-count');
-            countEl.innerText = `${wardData.count}名 超過`;
-            countEl.style.display = 'block';
-
-            // Update Doughnut Chart & List
-            const depts = Object.keys(wardData.depts).map(k => ({name: k, count: wardData.depts[k]})).sort((a,b) => b.count - a.count);
             
+            const targetHtml = wardData.needReduce > 0 
+                ? `<span style="font-size:13px; margin-left:15px; color:var(--accent-red); border-left:1px solid rgba(255,255,255,0.3); padding-left:15px;">Ⅱ超率患者 <span style="font-size:22px;">${wardData.needReduce}</span> 名超過</span>`
+                : `<span style="font-size:13px; margin-left:15px; color:#10b981; border-left:1px solid rgba(255,255,255,0.3); padding-left:15px;">✅ 30%目標クリア</span>`;
+                
+            const rateColor = wardData.rate > 30 ? 'var(--accent-red)' : '#10b981';
+            countEl.innerHTML = `<span style="color: ${rateColor};">${wardData.count}名 <span style="font-size:14px; font-weight:normal;">(Ⅱ超率${wardData.rate.toFixed(1)}%)</span></span> ${targetHtml}`;
+            countEl.style.display = 'flex';
+
+            const depts = Object.keys(wardData.depts).map(k => ({name: k, count: wardData.depts[k]})).sort((a,b) => b.count - a.count);
             chartWardDept.data.labels = depts.map(d => d.name);
             chartWardDept.data.datasets[0].data = depts.map(d => d.count);
             chartWardDept.update();
 
-            document.getElementById('ward-dept-list').innerHTML = depts.map((d, idx) => `
-                <li><strong>${d.name}:</strong> ${d.count}名 <span style="color:var(--text-muted); font-size:11px;">(${Math.round((d.count/wardData.count)*100)}%)</span></li>
-            `).join('');
+            document.getElementById('ward-dept-list').innerHTML = depts.map((d) => `<li><strong>${d.name}:</strong> ${d.count}名 <span style="color:var(--text-muted); font-size:11px;">(${Math.round((d.count/wardData.count)*100)}%)</span></li>`).join('');
 
-            // Update Patient Table for this ward
             const sortedPatients = wardData.patients.sort((a,b) => b.over - a.over);
             document.querySelector('#ward-patient-table tbody').innerHTML = sortedPatients.map(p => `
                 <tr onclick="openPatientModal('${p.id}')" style="cursor: pointer;">
@@ -981,24 +1036,17 @@
 
         function selectDept(deptName) {
             const tbody = document.querySelector("#dept-table tbody");
-            // Highlight selected row
             Array.from(tbody.children).forEach(tr => {
-                if (tr.children[0] && tr.children[0].innerText === deptName) {
-                    tr.style.backgroundColor = 'var(--highlight-bg)';
-                } else {
-                    tr.style.backgroundColor = '';
-                }
+                if (tr.children[0] && tr.children[0].innerText.includes(deptName)) tr.style.backgroundColor = 'var(--highlight-bg)';
+                else tr.style.backgroundColor = '';
             });
 
-            // Filter patients
             const patients = currentParsedData.filter(p => p.dept.replace("総）","").trim() === deptName || p.dept === deptName);
-            
             const container = document.getElementById('dept-patient-container');
             const title = document.getElementById('dept-patient-title');
             const tbodyPatient = document.querySelector("#dept-patient-table tbody");
             
             title.innerHTML = `📋 ${deptName} の超過患者リスト (${patients.length}名)`;
-            
             tbodyPatient.innerHTML = patients.sort((a,b) => b.over - a.over).map(p => `
                 <tr onclick="openPatientModal('${p.id}')" style="cursor: pointer;">
                     <td><strong>${p.doctor}</strong><br><span style="font-size:10px;color:var(--text-muted);">${p.ward}</span></td>
@@ -1010,11 +1058,7 @@
             `).join('');
             
             container.style.display = 'block';
-            
-            // Scroll to the list smoothly
-            setTimeout(() => {
-                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
+            setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
         }
 
         function renderActionTable(data) {
@@ -1052,16 +1096,13 @@
             document.getElementById('modal-ward').innerText = p.ward;
             document.getElementById('modal-disease').innerText = p.disease; 
             document.getElementById('modal-dpc').innerText = p.details.dpcCode;
-            
             document.getElementById('modal-admission').innerText = p.details.admissionDate;
             document.getElementById('modal-kikan1').innerText = p.details.kikan1;
             document.getElementById('modal-kikan2').innerText = p.details.kikan2;
             document.getElementById('modal-kikan3').innerText = p.details.kikan3;
-
             document.getElementById('modal-stay-over').innerHTML = `在院: <span style="font-size:18px;">${p.stay}日</span> <span style="color:var(--accent-red); margin-left:10px;">+${p.over}日</span>`;
             document.getElementById('modal-type').innerHTML = `<span class="badge ${p.type.includes('出来高')?'badge-red':(p.type.includes('Ⅲ')?'badge-orange':'')}" style="background:var(--accent-orange);color:white;padding:4px 8px;border-radius:4px;font-size:12px;">${p.type}</span>`;
             if(p.type.includes('出来高')) document.getElementById('modal-type').firstChild.style.background = 'var(--accent-red)';
-            
             document.getElementById('patient-modal').classList.add('active');
         }
         function closePatientModal() { document.getElementById('patient-modal').classList.remove('active'); }
