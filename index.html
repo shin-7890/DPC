@@ -244,11 +244,14 @@
                 <div class="panel-title">🔍 診療科別分析</div>
                 <div class="drilldown-container">
                     <div style="height: 300px;"><canvas id="deptChart"></canvas></div>
-                    <div class="table-scroll-container">
-                        <table id="dept-table">
-                            <thead><tr><th>診療科</th><th>期間II超過</th><th>Ⅱ超率 (目標30%以内)</th><th>平均超過日数</th></tr></thead>
-                            <tbody><tr><td colspan="4" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
-                        </table>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">※未コーディング患者はカウントされていないため実際の数値と若干の差異があります</div>
+                        <div class="table-scroll-container">
+                            <table id="dept-table">
+                                <thead><tr><th>診療科</th><th>期間II超過</th><th>Ⅱ超率 (目標30%以内)</th><th>平均超過日数</th></tr></thead>
+                                <tbody><tr><td colspan="4" style="text-align:center;">Excelデータを読み込んでください</td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -592,6 +595,8 @@
         function exportAction() { showToast('経営層向けエクスポート機能は現在実装中です'); }
 
         function initCharts() {
+            if (chartTrend) return; // 多重初期化を防止
+
             chartTrend = new Chart(document.getElementById('trendChart').getContext('2d'), {
                 type: 'line',
                 data: { 
@@ -693,6 +698,8 @@
         }
 
         function handleFileSelect(event) {
+            if (!chartTrend) initCharts(); // グラフが未初期化の場合は初期化する
+            
             const files = Array.from(event.target.files);
             if (files.length === 0) return;
             
@@ -845,8 +852,29 @@
             const maxP = [...overData].sort((a,b)=>b.stay-a.stay)[0];
             if(maxP) { document.getElementById('kpi-max-stay').innerText = `${maxP.stay} 日`; document.getElementById('kpi-max-disease').innerText = `${maxP.disease} (${maxP.dept.replace("総）","")})`; }
 
+            const sortedTrendKeys = Object.keys(window.trendDataMap).sort((a, b) => window.trendDataMap[a].dateObj - window.trendDataMap[b].dateObj);
+            let trendText = "";
+            if (sortedTrendKeys.length > 1) {
+                const latestKey = sortedTrendKeys[sortedTrendKeys.length - 1];
+                const prevKey = sortedTrendKeys[sortedTrendKeys.length - 2];
+                const latestOver = window.trendDataMap[latestKey].over;
+                const prevOver = window.trendDataMap[prevKey].over;
+                const diff = latestOver - prevOver;
+                
+                if (diff > 0) {
+                    trendText = `<span style="color:var(--accent-red);font-weight:bold;">前回 (${prevKey}) から ${diff} 名増加</span> しています。全体的に滞留が長期化する懸念があるため、各診療科への早期退院判断のアナウンスを強化してください。`;
+                } else if (diff < 0) {
+                    trendText = `<span style="color:#10b981;font-weight:bold;">前回 (${prevKey}) から ${Math.abs(diff)} 名減少</span> しています。退院調整の成果が表れています。このペースを維持しつつ、引き続き主治医へ早期退院許可を促してください。`;
+                } else {
+                    trendText = `前回 (${prevKey}) から人数の変化はありません。依然として一定数の超過患者が滞留しているため、カンバンボードを活用して個別の退院障壁を解消してください。`;
+                }
+            } else {
+                trendText = `データが1回分のみのため、トレンド比較はできません。過去または次週のデータを読み込むことで推移傾向が評価されます。`;
+            }
+
             document.getElementById('summary-analysis-text').innerHTML = `
-                ・ <strong>直近分析結果 (${displayDateStr}):</strong> 期間Ⅱ超過患者数は <strong>${totalOver}名</strong>（うち出来高 <strong>${totalDekidaka}名</strong>）。<br>
+                ・ <strong>直近分析結果 (${displayDateStr}):</strong> 期間Ⅱ超過患者数は <strong><span style="color:var(--accent-blue);">${totalOver}名</span></strong>（うち出来高 <strong><span style="color:var(--accent-red);">${totalDekidaka}名</span></strong>）。<br>
+                ・ <strong>トレンド評価:</strong> ${trendText}<br>
                 ・ <strong>収益構造のボトルネック:</strong> 超過患者の約 ${(totalOver > 0 ? ((totalDekidaka/totalOver)*100).toFixed(0) : 0)}% が利益率の最も低くなる出来高算定（期間Ⅲ超え）へ流出しており、1日あたり大きな逸失利益が発生しています。<br>
                 ・ <strong>推奨アクション:</strong> 出来高患者（${totalDekidaka}名）の退院・転院調整を最優先としつつ、「事前検知」タブでリミット目前の患者へ主治医による早期退院許可を促してください。
             `;
@@ -880,9 +908,9 @@
                     : `<br><span style="font-size:11px;color:#10b981;font-weight:bold;">✅ 目標クリア</span>`;
                 return `<tr onclick="selectDept('${d.n}')" style="cursor:pointer;" title="クリックして患者リストを表示">
                     <td><strong>${d.n}</strong><br><span style="font-size:10px;color:var(--text-muted);">総患者: ${d.total}名</span></td>
-                    <td style="color:var(--accent-red);font-weight:bold;">${d.c}名</td>
+                    <td style="font-weight:bold; font-size:14px; color:var(--accent-blue);">${d.c}<span style="font-size:11px; font-weight:normal; color:var(--text-muted);"> 名</span></td>
                     <td style="font-weight:bold; color:${d.rate > 30 ? 'var(--accent-red)' : '#10b981'};">${d.rate}% ${reduceHtml}</td>
-                    <td style="color:var(--accent-orange);">+${d.avg}日</td>
+                    <td style="font-weight:bold; color:var(--accent-orange);">+${d.avg}<span style="font-size:11px; font-weight:normal; color:var(--text-muted);"> 日</span></td>
                 </tr>`;
             }).join('');
 
@@ -928,8 +956,8 @@
                         <span class="ward-name">${w.name}</span>
                     </div>
                     <div style="text-align:right;">
-                        <div class="ward-count" style="margin-bottom:4px; color: ${rateColor}; border: 1px solid ${rateColor};">${w.count}名 (Ⅱ超率${w.rate.toFixed(1)}%)</div>
-                        ${w.needReduce > 0 ? `<div style="font-size:11px; color:var(--accent-red); font-weight:bold;">Ⅱ超率患者 <span style="font-size:16px;">${w.needReduce}</span>名超過</div>` : `<div style="font-size:11px; color:#10b981; font-weight:bold;">✅ 目標クリア</div>`}
+                        <div style="margin-bottom:4px; font-weight:bold; font-size:14px; color:var(--accent-blue);">${w.count}<span style="font-size:11px; font-weight:normal; color:var(--text-muted);"> 名 </span><span style="font-size:12px; color:${rateColor};">(Ⅱ超率${w.rate.toFixed(1)}%)</span></div>
+                        ${w.needReduce > 0 ? `<div style="font-size:11px; color:var(--accent-red); font-weight:bold;">Ⅱ超率患者 <span style="font-size:16px;">${w.needReduce}</span>名過多</div>` : `<div style="font-size:11px; color:#10b981; font-weight:bold;">✅ 目標クリア</div>`}
                     </div>
                 </div>
             `}).join('') || `<div style="padding: 20px; text-align: center;">データなし</div>`;
@@ -1018,11 +1046,11 @@
             const countEl = document.getElementById('selected-ward-count');
             
             const targetHtml = wardData.needReduce > 0 
-                ? `<span style="font-size:13px; margin-left:15px; color:var(--accent-red); border-left:1px solid rgba(255,255,255,0.3); padding-left:15px;">Ⅱ超率患者 <span style="font-size:22px;">${wardData.needReduce}</span> 名超過</span>`
+                ? `<span style="font-size:13px; margin-left:15px; color:var(--accent-red); border-left:1px solid rgba(255,255,255,0.3); padding-left:15px;">Ⅱ超率患者 <span style="font-size:22px;">${wardData.needReduce}</span> 名過多</span>`
                 : `<span style="font-size:13px; margin-left:15px; color:#10b981; border-left:1px solid rgba(255,255,255,0.3); padding-left:15px;">✅ 30%目標クリア</span>`;
                 
             const rateColor = wardData.rate > 30 ? 'var(--accent-red)' : '#10b981';
-            countEl.innerHTML = `<span style="color: ${rateColor};">${wardData.count}名 <span style="font-size:14px; font-weight:normal;">(Ⅱ超率${wardData.rate.toFixed(1)}%)</span></span> ${targetHtml}`;
+            countEl.innerHTML = `<span style="color: var(--accent-blue); font-size: 20px; font-weight: bold;">${wardData.count}名</span> <span style="font-size:14px; font-weight:bold; color:${rateColor};">(Ⅱ超率${wardData.rate.toFixed(1)}%)</span> ${targetHtml}`;
             countEl.style.display = 'flex';
 
             const depts = Object.keys(wardData.depts).map(k => ({name: k, count: wardData.depts[k]})).sort((a,b) => b.count - a.count);
